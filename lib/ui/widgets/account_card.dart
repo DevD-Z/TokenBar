@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../format.dart';
 import 'provider_badge.dart';
 import 'window_row.dart';
@@ -14,13 +15,14 @@ class AccountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final s = snapshot;
     final provider = ProviderRegistry.instance.byId(s.providerId);
     final muted = theme.colorScheme.onSurfaceVariant;
     final subtitle = [
       s.email,
-      if (s.origin != null) '来自 ${s.origin}',
+      if (s.origin != null) l.fromDevice(s.origin!),
     ].whereType<String>().join(' · ');
 
     return Card(
@@ -78,8 +80,8 @@ class AccountCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 [
-                  '更新于 ${agoZh(s.fetchedAt, now)}',
-                  if (s.source != null) sourceLabel(s.source),
+                  l.updatedAgo(agoLabel(l, s.fetchedAt, now)),
+                  if (s.source != null) sourceLabel(l, s.source),
                 ].join(' · '),
                 style: theme.textTheme.labelSmall?.copyWith(color: muted.withValues(alpha: 0.8)),
               ),
@@ -120,6 +122,7 @@ class _CreditsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final percent = credits.usedPercent;
     return Padding(
@@ -132,9 +135,9 @@ class _CreditsRow extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 6),
-          Expanded(child: Text(creditsLabel(credits), style: theme.textTheme.bodyMedium)),
+          Expanded(child: Text(creditsLabel(l, credits), style: theme.textTheme.bodyMedium)),
           Text(
-            creditsValue(credits) + (percent == null ? '' : '  (${formatPercent(percent)})'),
+            creditsValue(l, credits) + (percent == null ? '' : '  (${formatPercent(percent)})'),
             style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
@@ -152,6 +155,7 @@ class _ErrorBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final color = stale ? theme.colorScheme.tertiary : theme.colorScheme.error;
     return Container(
@@ -172,7 +176,7 @@ class _ErrorBox extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  stale ? '显示的是上次数据：$error' : error,
+                  stale ? l.staleDataNotice(error) : error,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: color,
                     fontWeight: FontWeight.w600,

@@ -20,7 +20,7 @@
 <br>
 
 <img src="docs/screenshots/windows-dashboard-light.png" alt="Windows 上的额度总览" width="49%">
-<img src="docs/screenshots/windows-history-dark.png" alt="Windows 上的使用历史（深色主题）" width="49%">
+<img src="docs/screenshots/windows-history-light.png" alt="Windows 上的堆叠式使用历史" width="49%">
 
 </div>
 
@@ -38,10 +38,6 @@
 
 **Windows**
 
-<p align="center">
-  <img src="docs/screenshots/windows-dashboard-dark.png" alt="额度总览（深色）" width="49%">
-  <img src="docs/screenshots/windows-history-light.png" alt="堆叠式使用历史（浅色）" width="49%">
-</p>
 <p align="center">
   <img src="docs/screenshots/windows-tray-panel.png" alt="托盘小面板" width="26%">
 </p>
@@ -63,6 +59,7 @@
 | **托盘图标与小面板**（桌面） | 双进度条托盘图标跟随最紧张的窗口，点击弹出面板查看所有账户，右键仍是菜单。主窗口同时充当托盘面板。 |
 | **使用历史** | 按时间段堆叠的柱状图（24 小时 / 7 天 / 30 天），按额度窗口或费用项分项，显示每一项的占比和合计。 |
 | **通知** | 剩余额度低于你设定的阈值时提醒，额度较低后重置时再提醒。 |
+| **界面语言** | 简体中文与 English，在**设置 → 语言**中切换，默认跟随系统语言（中文系统用中文，其他语言用英文）。 |
 | **浅色 / 深色主题** | 跟随系统或手动选择。 |
 | **手机小组件** | Android 原生桌面小组件。iOS WidgetKit 源码已包含，尚未验证。 |
 | **检查更新** | 启动时（可关闭）或手动检查 GitHub 上是否有新版本，见[更新](#更新)。 |
@@ -192,10 +189,10 @@
 
 在 [**Releases**](https://github.com/lwh0630/TokenBar/releases/latest) 页面下载最新版本，并用 `SHA256SUMS.txt` 校验。
 
-### Windows 10 / 11（x64）
+### Windows 10 / 11（x64 与 ARM64）
 
-1. 下载 `tokenbar-<版本>-windows-x64.zip`，解压到任意位置。
-2. 运行 `token_bar.exe`。需要 Microsoft Visual C++ 运行库（x64），若无法启动请先安装。
+1. 下载 `tokenbar-<版本>-windows-x64.zip`（Intel / AMD）或 `tokenbar-<版本>-windows-arm64.zip`（Windows on ARM），解压到任意位置。
+2. 运行 `token_bar.exe`。需要与你的架构对应的 Microsoft Visual C++ 运行库，若无法启动请先安装。
 
 > Windows 版本没有代码签名。SmartScreen 可能提示"Windows 已保护你的电脑"：点击**更多信息 → 仍要运行**。启用了智能应用控制（Smart App Control）或应用控制策略的系统可能直接拦截未签名程序，这时请[从源码构建](#从源码构建)。
 
@@ -211,10 +208,10 @@ apksigner verify --print-certs tokenbar-<版本>-android-arm64-v8a.apk
 # certificate SHA-256 digest: c04373ec39a24dd04d6f6797ed984be27d172c01fc30833f957845bb5b622d27
 ```
 
-### macOS 12+（Apple 芯片与 Intel）— 实验性
+### macOS 12+
 
-1. 下载 `tokenbar-<version>-macos-universal.dmg`，打开后把 **TokenBar** 拖进**应用程序**。
-2. 应用**没有 Apple 开发者 ID 签名，也没有公证**，所以首次启动会被“门禁”（Gatekeeper）拦下。右键点击应用选择**打开**，或者执行：
+1. 下载 `tokenbar-<版本>-macos-arm64.dmg`（Apple 芯片：M1 及以后）或 `tokenbar-<版本>-macos-x86_64.dmg`（Intel），打开后把 **TokenBar** 拖进**应用程序**。
+2. 如果首次启动被 macOS 拦下，右键点击应用选择**打开**，或者执行：
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/TokenBar.app
@@ -225,7 +222,7 @@ xattr -dr com.apple.quarantine /Applications/TokenBar.app
 1. 下载 `tokenbar-<version>-linux-x64.tar.gz` 并解压。
 2. 运行解压目录里的 `./token_bar`。
 
-运行时依赖：GTK 3、`libsecret`（凭证存储，需要 GNOME Keyring 或 KWallet 之类的密钥环在运行）和 `libayatana-appindicator3`（托盘图标）。Debian / Ubuntu：`sudo apt install libgtk-3-0 libsecret-1-0 libayatana-appindicator3-1`。GNOME 桌面需要安装 AppIndicator 扩展才能显示托盘图标。
+运行时依赖：GTK 3、`libsecret`（凭证存储，需要 GNOME Keyring 或 KWallet 之类的密钥环在运行）和 `libayatana-appindicator3`（托盘图标）。Debian / Ubuntu：`sudo apt install libgtk-3-0 libsecret-1-0 libayatana-appindicator3-1`。GNOME 桌面需要安装 AppIndicator 扩展才能显示托盘图标。Linux 的托盘图标只有菜单、没有点击事件，所以托盘小面板在 Linux 上不可用，请用菜单里的**打开 TokenBar**。
 
 ### iOS 15+ — 实验性，仅支持侧载
 
@@ -235,10 +232,12 @@ xattr -dr com.apple.quarantine /Applications/TokenBar.app
 
 | 平台 | 状态 |
 | --- | --- |
-| Windows | 已支持。在 Windows 11 上构建并测试；CI 每次推送都会构建 release。 |
+| Windows x64 | 已支持。在 Windows 11 上构建并测试；CI 每次推送都会构建 release。 |
+| Windows ARM64 | 实验性。CI 每次推送都会在 Windows ARM 构建机上原生构建；**尚未在真正的 ARM 设备上运行**。 |
 | Android | 已支持。在 Android 模拟器（API 37）上测试；CI 每次推送都会构建，发布版本经过签名。 |
 | Web | CI 会构建。适合配合同步服务器使用（浏览器无法直接访问大多数服务商接口）。 |
-| macOS、Linux | 实验性。CI 每次推送都会构建，发布版本也包含它们（macOS 未签名、未公证），但**尚未在真机上运行验证**。欢迎贡献和反馈。 |
+| macOS | 维护者实测可用；CI 每次推送都会构建。仅 ad-hoc 签名、未公证（见上面的安装说明）。Apple 芯片和 Intel 分开提供。 |
+| Linux | 实验性。CI 每次推送都会构建，但**尚未在真机上运行验证**。托盘只有菜单（没有托盘小面板）。 |
 | iOS | 实验性。CI 构建**未签名**的 IPA（仅支持侧载），**尚未在真机上运行**。WidgetKit 源码没有编进 IPA。 |
 
 ## 开始使用
@@ -343,12 +342,12 @@ tool/gen_icons.py         重新生成各平台的应用图标
 
 ## 发布流程
 
-发布由 [`release.yml`](.github/workflows/release.yml) 完成：推送 `vX.Y.Z` 标签（或手动运行工作流）。它会检查并构建，用存放在 `production` 环境中的密钥给各 ABI 的 Android APK 签名，构建 Windows 压缩包、Linux 压缩包、未签名的 macOS 磁盘映像和未签名的 iOS IPA，并创建带 `SHA256SUMS.txt` 的**草稿** Release。手动发布草稿之前不会公开任何内容。上传前会用预期的证书指纹校验 APK。
+发布由 [`release.yml`](.github/workflows/release.yml) 完成：推送 `vX.Y.Z` 标签（或手动运行工作流）。它会检查并构建，用存放在 `production` 环境中的密钥给各 ABI 的 Android APK 签名，构建 Windows x64 与 ARM64 压缩包、Linux 压缩包、macOS（Apple 芯片与 Intel）磁盘映像和未签名的 iOS IPA，并创建带 `SHA256SUMS.txt` 的**草稿** Release。手动发布草稿之前不会公开任何内容。上传前会用预期的证书指纹校验 APK。
 
 ## 路线图
 
-- 英文（及其他语言）界面本地化。目前界面为简体中文。
-- 在真机上验证 macOS、Linux 和 iOS 版本。
+- 服务商模块提供的文字仍是中文：`packages/tokenbar_core` 中的配置提示、字段名、错误信息，以及较少见的额度和积分标签。应用界面本身已有简体中文和英文（`lib/l10n/`），之后可以在那里加入更多语言。
+- 在真机上验证 Linux、iOS 和 Windows ARM64 版本。
 - 带代码签名的 Windows 版本，以及签名并公证的 macOS 版本（都需要付费证书）。
 - 更多服务。新增一个服务工作量小、路径清晰：步骤和规则（只用有文档的接口、不虚构 API、不把凭证写进日志）见 [AGENTS.md](AGENTS.md)。
 
@@ -359,5 +358,7 @@ tool/gen_icons.py         重新生成各平台的应用图标
 ## 许可证
 
 [MIT](LICENSE)。服务接口的研究基于 [CodexBar](https://github.com/steipete/CodexBar)（MIT），见 [NOTICE.md](NOTICE.md)。
+
+服务商图标位于 `assets/provider_icons/`，复制自 CodexBar（MIT）。logo 为各自所有者的商标，仅用于标识对应服务，见 [assets/provider_icons/README.md](assets/provider_icons/README.md)。
 
 TokenBar 是独立项目，与其可监控的任何服务无隶属或背书关系。

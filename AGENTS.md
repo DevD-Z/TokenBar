@@ -74,6 +74,15 @@ cd packages/tokenbar_server && dart build cli -o ../../build/server         # �
    （`api_providers_test.dart` 里的 `_run(providerId, {URL 子串: 响应体或状态码})` 辅助函数）。
 5. 更新 `README.md` 的服务表。
 
+## 多语言（i18n）
+
+- 应用界面支持简体中文（模板 `lib/l10n/app_zh.arb`）和 English（`lib/l10n/app_en.arb`），由 Flutter gen-l10n 生成 `lib/l10n/app_localizations*.dart`（配置在根目录 `l10n.yaml`，`pubspec.yaml` 中 `generate: true`）。生成文件要提交（`synthetic-package` 已被 Flutter 移除，`.gitignore` 也不忽略它们）；不要手改，改 ARB 后运行 `flutter gen-l10n`（或 `flutter pub get`）。
+- **新增或修改面向用户的文案，必须同时写 `app_zh.arb` 和 `app_en.arb`**（`test/i18n_test.dart` 会检查两边 key 一致）。带参数的文案用占位符并在模板里声明 `@key.placeholders`；英文复数用 ICU `plural`；ARB 里单引号要写成 `''`。
+- 语言设置是 `AppSettings.language`（`AppLanguage.system / zh / en`，默认跟随系统：中文系统用中文，其他语言一律用英文），由 `lib/l10n/app_locale.dart` 的 `resolveAppLocale` 解析。`MaterialApp` 始终设置明确的 `locale`（zh_CN 或 en_US），中文环境的 CJK 字体回退仍在 `AppTheme.fonts`。
+- 取文案：widget 里用 `AppLocalizations.of(context)`；不在 widget 树里的代码（服务层、controller、托盘）通过参数接收 `AppLocalizations`（controller 上是 `l10n` getter），不要用全局可变状态。`lib/ui/format.dart` 的格式化函数都带 `AppLocalizations l` 参数。
+- `packages/tokenbar_core`（服务商）里的错误消息、`setupHint`、`ProviderField` 的 label 暂时仍是中文，不在 UI 的翻译范围内。UI 层的 `windowLabel` 只翻译常见窗口词（每周 / 每月 / 每日 / 5 小时 / 本月 / 今日 / 额度），新增常见词时在 `format.dart` 的 `_coreLabel` 里补充。
+- 测试里的 `MaterialApp` 要加 `locale`、`supportedLocales` 和 `localizationsDelegates`（参考 `test/widget_test.dart`），否则 `AppLocalizations.of` 会报错。
+
 ## 安全规则（必须遵守）
 
 - 不虚构 API；非公开接口必须能在 CodexBar 源码中找到依据，并注明授权方式与限制。
@@ -86,8 +95,11 @@ cd packages/tokenbar_server && dart build cli -o ../../build/server         # �
 
 ## 发布与更新
 
-- 发布：推送 `vX.Y.Z` 标签触发 `.github/workflows/release.yml`，生成**草稿** Release（Android 分 ABI 签名 APK + Windows zip + Linux tar.gz + macOS dmg + iOS 未签名 ipa + `SHA256SUMS.txt`），手动发布后才对外可见。`ci.yml` 只检查与构建（含 Linux / macOS / iOS）。
-- macOS / iOS 没有 Apple 开发者账号：macOS 只有 ad-hoc 签名（不公证），iOS 用 `--no-codesign` 后手工打包 `Payload/Runner.app` 成 ipa，只能侧载。这三个平台**未在真机验证**，README 与 Release 说明必须保持这个表述。Linux 构建需要 `libgtk-3-dev libsecret-1-dev libayatana-appindicator3-dev` 等（见 workflow）。
+- 发布：推送 `vX.Y.Z` 标签触发 `.github/workflows/release.yml`，生成**草稿** Release（Android 分 ABI 签名 APK + Windows x64 / arm64 zip + Linux tar.gz + macOS arm64 / x86_64 dmg + iOS 未签名 ipa + `SHA256SUMS.txt`），手动发布后才对外可见。`ci.yml` 只检查与构建（含 Windows arm64 / Linux / macOS / iOS）。
+- macOS / iOS 没有 Apple 开发者账号：macOS 只有 ad-hoc 签名（不公证），iOS 用 `--no-codesign` 后手工打包 `Payload/Runner.app` 成 ipa，只能侧载。macOS 由维护者实测可用；Linux、iOS、Windows arm64 **未在真机验证**，README 与 Release 说明必须保持这个表述。Linux 构建需要 `libgtk-3-dev libsecret-1-dev libayatana-appindicator3-dev` 等（见 workflow）。
+- macOS 的 arm64 / x86_64 两个 dmg 是从 Flutter 的通用（universal）构建里用 `lipo -thin` 逐个 Mach-O 裁剪后重新 ad-hoc 签名得到的（Flutter 只能构建通用包）。
+- Windows arm64：Flutter 不发布 Windows arm64 的 SDK 压缩包，`windows-11-arm` 构建机上从源码克隆固定 commit（`FLUTTER_COMMIT`）的 Flutter，由它自动引导 arm64 Dart。用 x64 SDK 会构建出 x64 目标，所以工作流里校验了 exe 的 PE 机器类型。升级 Flutter 版本时 `FLUTTER_VERSION` 和 `FLUTTER_COMMIT` 要一起改。
+- `tray_manager` 0.5.0 在 macOS 上用 `rootBundle.load(iconPath)` 读图标，只支持打包进 App 的资源；运行时生成的托盘图标要绕开它，直接用 `MethodChannel('tray_manager')` 传 `base64Icon`（见 `desktop_io.dart` 的 `_setMacIcon`）。Linux 的 AppIndicator 没有点击事件，托盘面板不可用，只有菜单。
 - 检查更新：`lib/services/update/`（`UpdateService` 读 `releases/latest`，忽略草稿 / 预发布，只信任 github.com 链接）+ `state/update_controller.dart`。只打开发布页，不自动下载安装。仓库名常量在 `lib/app_info.dart`。
 - 版本号：`pubspec.yaml` 的 `version` 是开发默认值，CI 用 tag 覆盖 `--build-name`，`--build-number` 取 `github.run_number`。
 
@@ -105,7 +117,7 @@ cd packages/tokenbar_server && dart build cli -o ../../build/server         # �
 - `dart format` 会把单行 `if (x) y;` 拆开，随后 `curly_braces_in_flow_control_structures` 报 info：用 `dart fix --apply` 补花括号。
 - Dart 的 `String.replaceFirst` 不支持 `$1` 反向引用，要用 `replaceFirstMapped`。
 - 应用图标由 `python tool/gen_icons.py` 统一生成（Pillow 4 倍超采样，改设计只改这一个文件）；托盘图标由 `TrayIconRenderer` 绘制，同样做了超采样抗锯齿。不要手改各平台的图标文件。
-- 中文字体：Flutter 在 Windows 的默认字体 Segoe UI 没有汉字，必须在 `AppTheme.fonts` 里显式写 CJK 回退（微软雅黑），并在 `MaterialApp` 设 `locale: zh_CN`（需要 `flutter_localizations`），否则会落到奇怪的字体。
+- 中文字体：Flutter 在 Windows 的默认字体 Segoe UI 没有汉字，必须在 `AppTheme.fonts` 里显式写 CJK 回退（微软雅黑），并让 `MaterialApp` 始终设置 `locale`（中文为 zh_CN，英文为 en_US，见上面的多语言一节；需要 `flutter_localizations`），否则会落到奇怪的字体。
 - 托盘面板与主窗口是同一个窗口：`DesktopIntegration.panelMode` 为 true 时 `MaterialApp.builder` 显示 `TrayPanel`，主界面用 `Offstage` 保留状态；窗口失焦自动隐藏。面板高度由 `TrayPanel.heightFor` 估算，改面板布局要同步改它。`token_bar.exe --panel`（或 `flutter run -d windows --dart-entrypoint-args=--panel`）可直接打开面板用于调试。
 - 历史图表分项来自 `UsagePoint.used`（窗口已用 %）和 `UsagePoint.spend`（`Credits.used`），按桶求增量，数值下降视为窗口重置；计算在 `lib/ui/history_series.dart`，有单元测试。
 - 不接入的服务（需要请求签名、浏览器 Cookie 库解密、macOS 钥匙串、或要发真实推理请求来探测额度）列在 README 的“暂不支持”里，新增前先看一眼。

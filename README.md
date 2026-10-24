@@ -20,7 +20,7 @@ English | [简体中文](README.zh-CN.md)
 <br>
 
 <img src="docs/screenshots/windows-dashboard-light.png" alt="TokenBar dashboard on Windows" width="49%">
-<img src="docs/screenshots/windows-history-dark.png" alt="TokenBar usage history on Windows (dark theme)" width="49%">
+<img src="docs/screenshots/windows-history-light.png" alt="TokenBar stacked usage history on Windows" width="49%">
 
 </div>
 
@@ -39,10 +39,6 @@ English | [简体中文](README.zh-CN.md)
 **Windows**
 
 <p align="center">
-  <img src="docs/screenshots/windows-dashboard-dark.png" alt="Dashboard, dark theme" width="49%">
-  <img src="docs/screenshots/windows-history-light.png" alt="Stacked usage history, light theme" width="49%">
-</p>
-<p align="center">
   <img src="docs/screenshots/windows-tray-panel.png" alt="Tray panel" width="26%">
 </p>
 
@@ -54,7 +50,7 @@ English | [简体中文](README.zh-CN.md)
   <img src="docs/screenshots/android-history.png" alt="Usage history on Android" width="26%">
 </p>
 
-> The app interface is currently in Simplified Chinese. English localization is on the [roadmap](#roadmap). Provider names, plan names and numbers are shown as the providers report them.
+> The app interface is available in Simplified Chinese and English. Switch in **Settings → Language**; the default follows your system language (Chinese systems get Chinese, everything else gets English). Text that comes from the provider integrations (setup hints, some field names and error messages) is still Chinese for now, see the [roadmap](#roadmap). Provider names, plan names and numbers are shown as the providers report them.
 
 ## Features
 
@@ -65,6 +61,7 @@ English | [简体中文](README.zh-CN.md)
 | **Tray icon and panel** *(desktop)* | A two-bar tray icon driven by the tightest window, a click-to-open panel for all accounts, right-click menu. The same window doubles as the panel. |
 | **Usage history** | Stacked bars per time slot (24 h / 7 d / 30 d), broken down by quota window or by cost item, with each item's share and total. |
 | **Notifications** | Low-quota alerts at thresholds you choose and an alert when a low quota resets. |
+| **Languages** | Simplified Chinese and English. Choose in **Settings → Language**; defaults to the system language. |
 | **Light and dark themes** | Follows the system or set manually. |
 | **Phone widgets** | Native Android home-screen widget. iOS WidgetKit sources are included but unverified. |
 | **Update check** | Looks for a newer GitHub release at launch (can be turned off) or on demand. See [Updates](#updates). |
@@ -194,10 +191,10 @@ Each provider reads documented or reverse-documented endpoints taken from CodexB
 
 Download the latest build from the [**Releases**](https://github.com/lwh0630/TokenBar/releases/latest) page and check it against `SHA256SUMS.txt`.
 
-### Windows 10 / 11 (x64)
+### Windows 10 / 11 (x64 and ARM64)
 
-1. Download `tokenbar-<version>-windows-x64.zip` and extract it anywhere.
-2. Run `token_bar.exe`. The Microsoft Visual C++ Redistributable (x64) is required; install it if the app does not start.
+1. Download `tokenbar-<version>-windows-x64.zip` (Intel / AMD) or `tokenbar-<version>-windows-arm64.zip` (Windows on ARM) and extract it anywhere.
+2. Run `token_bar.exe`. The Microsoft Visual C++ Redistributable (matching your architecture) is required; install it if the app does not start.
 
 > The Windows build is not code-signed. SmartScreen may show "Windows protected your PC": choose **More info → Run anyway**. Systems that enforce Smart App Control or an application-control policy can block unsigned executables outright. In that case, [build from source](#build-from-source).
 
@@ -213,10 +210,10 @@ apksigner verify --print-certs tokenbar-<version>-android-arm64-v8a.apk
 # certificate SHA-256 digest: c04373ec39a24dd04d6f6797ed984be27d172c01fc30833f957845bb5b622d27
 ```
 
-### macOS 12+ (Apple Silicon and Intel) — experimental
+### macOS 12+
 
-1. Download `tokenbar-<version>-macos-universal.dmg`, open it and drag **TokenBar** to **Applications**.
-2. The app is **not signed with an Apple Developer ID and not notarized**, so Gatekeeper blocks the first launch. Right-click the app and choose **Open**, or run:
+1. Download `tokenbar-<version>-macos-arm64.dmg` (Apple Silicon: M1 and later) or `tokenbar-<version>-macos-x86_64.dmg` (Intel), open it and drag **TokenBar** to **Applications**.
+2. If macOS blocks the first launch, right-click the app and choose **Open**, or run:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/TokenBar.app
@@ -227,7 +224,7 @@ xattr -dr com.apple.quarantine /Applications/TokenBar.app
 1. Download `tokenbar-<version>-linux-x64.tar.gz` and extract it.
 2. Run `./token_bar` inside the extracted folder.
 
-Runtime libraries: GTK 3, `libsecret` (credential storage, with a running keyring such as GNOME Keyring or KWallet) and `libayatana-appindicator3` (tray icon). On Debian / Ubuntu: `sudo apt install libgtk-3-0 libsecret-1-0 libayatana-appindicator3-1`. On GNOME the tray icon needs the AppIndicator extension.
+Runtime libraries: GTK 3, `libsecret` (credential storage, with a running keyring such as GNOME Keyring or KWallet) and `libayatana-appindicator3` (tray icon). On Debian / Ubuntu: `sudo apt install libgtk-3-0 libsecret-1-0 libayatana-appindicator3-1`. On GNOME the tray icon needs the AppIndicator extension. Linux tray icons only offer a menu (no click event), so the compact tray panel is not available there: use the menu's **Open TokenBar**.
 
 ### iOS 15+ — experimental, sideload only
 
@@ -237,10 +234,12 @@ Runtime libraries: GTK 3, `libsecret` (credential storage, with a running keyrin
 
 | Platform | Status |
 | --- | --- |
-| Windows | Supported. Built and tested on Windows 11; CI builds a release on every push. |
+| Windows x64 | Supported. Built and tested on Windows 11; CI builds a release on every push. |
+| Windows ARM64 | Experimental. Built natively on a Windows ARM runner by CI on every push; **not run on real ARM hardware**. |
 | Android | Supported. Tested on an Android emulator (API 37); CI builds on every push and releases are signed. |
 | Web | Builds in CI. Intended for use with the sync server (browsers cannot reach most provider endpoints directly). |
-| macOS, Linux | Experimental. CI builds them on every push and releases include them (macOS unsigned and not notarized), but they have **not been run on real machines**. Contributions and bug reports welcome. |
+| macOS | Works in the maintainer's testing; CI builds it on every push. Ad-hoc signed and not notarized (see the install note above). Separate Apple Silicon and Intel images. |
+| Linux | Experimental. CI builds it on every push, but it has **not been run on a real machine**. The tray is a menu only (no tray panel). |
 | iOS | Experimental. CI builds an **unsigned** IPA (sideload only); it has **not been run on a device**. The WidgetKit sources are not built into it. |
 
 ## Getting started
@@ -345,12 +344,12 @@ tool/gen_icons.py         Regenerates the app icons for every platform
 
 ## Releasing
 
-Releases are cut by [`release.yml`](.github/workflows/release.yml): push a `vX.Y.Z` tag (or run the workflow by hand). It checks, builds and signs per-ABI Android APKs with the key stored in the `production` environment, builds the Windows zip, the Linux tarball, the unsigned macOS disk image and the unsigned iOS IPA, and creates a **draft** release with `SHA256SUMS.txt`. Nothing goes public until the draft is published by hand. APKs are verified against the expected certificate fingerprint before upload.
+Releases are cut by [`release.yml`](.github/workflows/release.yml): push a `vX.Y.Z` tag (or run the workflow by hand). It checks, builds and signs per-ABI Android APKs with the key stored in the `production` environment, builds the Windows x64 and ARM64 zips, the Linux tarball, the macOS Apple Silicon and Intel disk images and the unsigned iOS IPA, and creates a **draft** release with `SHA256SUMS.txt`. Nothing goes public until the draft is published by hand. APKs are verified against the expected certificate fingerprint before upload.
 
 ## Roadmap
 
-- English (and other) UI localization. The interface is Simplified Chinese today.
-- Verify the macOS, Linux and iOS builds on real devices.
+- Provider-supplied text is still Chinese: setup hints, field labels and error messages in `packages/tokenbar_core`, plus the less common quota and credit labels. The app UI itself is translated (`lib/l10n/`); more UI languages can be added there.
+- Verify the Linux, iOS and Windows ARM64 builds on real devices.
 - Code-signed Windows build and a signed, notarized macOS build (both need paid certificates).
 - More providers. Adding one is small and well-trodden: see [AGENTS.md](AGENTS.md) for the steps and the rules (documented endpoints only, no invented APIs, no credentials in logs).
 
@@ -361,5 +360,7 @@ Issues and pull requests are welcome. Before opening a PR run the checks in [Tes
 ## License
 
 [MIT](LICENSE). Provider research is based on [CodexBar](https://github.com/steipete/CodexBar) (MIT); see [NOTICE.md](NOTICE.md).
+
+Provider logos in `assets/provider_icons/` are copied from CodexBar (MIT). They are trademarks of their respective owners, used only to identify the services; see [assets/provider_icons/README.md](assets/provider_icons/README.md).
 
 TokenBar is an independent project and is not affiliated with or endorsed by any of the services it can monitor.

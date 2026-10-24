@@ -1,0 +1,10 @@
+# Flutter gen-l10n configuration (see lib/l10n/ and the i18n section in AGENTS.md).
+# synthetic-package was removed in Flutter 3.x, so the generated files are written
+# next to the ARB files and committed. Do not edit them by hand: run `flutter gen-l10n`
+# (or any `flutter pub get` / `flutter run`, since `generate: true` is set in pubspec.yaml).
+arb-dir: lib/l10n
+template-arb-file: app_zh.arb
+output-localization-file: app_localizations.dart
+output-dir: lib/l10n
+# `AppLocalizations.of(context)` returns a non-null value (the app always has delegates).
+nullable-getter: false

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
 import '../app/theme.dart';
+import '../l10n/app_localizations.dart';
 import '../state/app_controller.dart';
 import 'format.dart';
 import 'widgets/provider_badge.dart';
@@ -32,6 +33,7 @@ class TrayPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final c = context.watch<AppController>();
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
@@ -50,7 +52,7 @@ class TrayPanel extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Text(
-                          c.refreshing ? '正在读取额度…' : '还没有账户\n打开 TokenBar 添加服务',
+                          c.refreshing ? l.quotaLoading : l.noAccountsYetPanel,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
@@ -84,6 +86,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final c = controller;
     return Padding(
@@ -102,7 +105,7 @@ class _Header extends StatelessWidget {
                   ValueListenableBuilder(
                     valueListenable: c.now,
                     builder: (_, now, _) => Text(
-                      '更新于 ${agoZh(c.lastRefresh!, now)}',
+                      l.updatedAgo(agoLabel(l, c.lastRefresh!, now)),
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -112,6 +115,7 @@ class _Header extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: l.refresh,
             onPressed: c.refreshing ? null : c.refresh,
             visualDensity: VisualDensity.compact,
             icon: c.refreshing
@@ -136,6 +140,7 @@ class _AccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final s = snapshot;
     final provider = ProviderRegistry.instance.byId(s.providerId);
@@ -188,12 +193,12 @@ class _AccountTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    creditsLabel(credit),
+                    creditsLabel(l, credit),
                     style: theme.textTheme.bodySmall?.copyWith(color: muted),
                   ),
                 ),
                 Text(
-                  creditsValue(credit),
+                  creditsValue(l, credit),
                   style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ],
@@ -203,7 +208,7 @@ class _AccountTile extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                '显示的是上次数据：${s.error}',
+                l.staleDataNotice(s.error!),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.tertiary),
@@ -223,6 +228,7 @@ class _CompactWindow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     final remaining = window.remainingPercent;
@@ -234,7 +240,7 @@ class _CompactWindow extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                windowLabel(window),
+                windowLabel(l, window),
                 style: theme.textTheme.bodySmall?.copyWith(color: muted),
               ),
             ),
@@ -253,7 +259,7 @@ class _CompactWindow extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 3),
             child: Text(
-              '${countdownZh(reset)}后重置',
+              resetsInLabel(l, reset),
               style: theme.textTheme.labelSmall?.copyWith(color: muted),
             ),
           ),
@@ -269,6 +275,7 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final desktop = controller.desktop;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -277,7 +284,7 @@ class _Footer extends StatelessWidget {
           TextButton.icon(
             onPressed: desktop.showMainWindow,
             icon: const Icon(Icons.open_in_new, size: 16),
-            label: const Text('打开 TokenBar'),
+            label: Text(l.openTokenBar),
           ),
           const Spacer(),
           TextButton(
@@ -285,7 +292,7 @@ class _Footer extends StatelessWidget {
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            child: const Text('退出'),
+            child: Text(l.quit),
           ),
         ],
       ),

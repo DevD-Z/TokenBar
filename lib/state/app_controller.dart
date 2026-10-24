@@ -1,14 +1,17 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' show Locale, PlatformDispatcher;
 
 import 'package:flutter/foundation.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
+import '../demo/demo_data.dart';
+import '../l10n/app_locale.dart';
+import '../l10n/app_localizations.dart';
 import '../services/desktop.dart';
 import '../services/history_store.dart';
 import '../services/home_widget_bridge.dart';
 import '../services/notifier.dart';
-import '../demo/demo_data.dart';
 import '../services/persistence.dart';
 import '../services/quota_alerts.dart';
 import 'settings.dart';
@@ -38,6 +41,12 @@ class AppController extends ChangeNotifier {
   /// Ticks for countdown labels.
   final ValueNotifier<DateTime> now = ValueNotifier(DateTime.now());
 
+  /// Locale in effect for the current language setting and device languages.
+  Locale get locale => resolveAppLocale(settings.language, PlatformDispatcher.instance.locales);
+
+  /// Localized strings for code that runs outside the widget tree.
+  AppLocalizations get l10n => lookupAppLocalizations(locale);
+
   Timer? _refreshTimer;
   Timer? _clockTimer;
   int _consecutiveFailures = 0;
@@ -60,7 +69,7 @@ class AppController extends ChangeNotifier {
     lastRefresh = DateTime.now();
     _clockTimer = Timer.periodic(const Duration(seconds: 15), (_) => now.value = DateTime.now());
     notifyListeners();
-    unawaited(desktop.update(snapshots));
+    unawaited(desktop.update(snapshots, l10n));
   }
 
   Future<void> init() async {
@@ -165,7 +174,7 @@ class AppController extends ChangeNotifier {
       if (settings.syncMode.usesServer && settings.serverConfigured) {
         anySuccess = await _sync(fresh) || anySuccess;
       } else if (settings.syncMode.usesServer) {
-        syncError = '请先在设置中配置服务器地址和令牌';
+        syncError = l10n.syncNeedsServerConfig;
       } else {
         syncError = null;
       }
@@ -181,8 +190,8 @@ class AppController extends ChangeNotifier {
       _scheduleNext();
       notifyListeners();
       final shown = snapshots;
-      unawaited(desktop.update(shown));
-      unawaited(homeWidget.publish(shown));
+      unawaited(desktop.update(shown, l10n));
+      unawaited(homeWidget.publish(shown, l10n));
     }
   }
 
@@ -201,7 +210,7 @@ class AppController extends ChangeNotifier {
           providerId: a.providerId,
           fetchedAt: DateTime.now(),
           accountLabel: a.label,
-          error: '不支持的服务：${a.providerId}',
+          error: l10n.unsupportedProvider(a.providerId),
         );
       }
       final s = await provider.fetchSafely(a, ctx);
@@ -242,7 +251,7 @@ class AppController extends ChangeNotifier {
       syncError = null;
       return true;
     } catch (e) {
-      syncError = '同步失败：$e';
+      syncError = l10n.syncFailed('$e');
       return false;
     } finally {
       api.close();
@@ -274,9 +283,10 @@ class AppController extends ChangeNotifier {
         thresholds: settings.thresholds,
         notifyOnReset: settings.notifyOnReset,
         providerName: provider?.displayName ?? s.providerId,
+        l10n: l10n,
       );
       for (final a in alerts) {
-        unawaited(notifier.show(a.title, a.body));
+        unawaited(notifier.show(a.title, a.body, l10n));
       }
     }
     unawaited(persistence.saveNotifyState(_alerts.state));
@@ -337,7 +347,7 @@ class AppController extends ChangeNotifier {
     await historyStore.removeAccount(id);
     await persistence.saveCachedSnapshots(_snapshots.values.toList());
     notifyListeners();
-    unawaited(desktop.update(snapshots));
+    unawaited(desktop.update(snapshots, l10n));
   }
 
   /// [newIndex] is already adjusted for the removed item (onReorderItem).
@@ -357,6 +367,11 @@ class AppController extends ChangeNotifier {
     settings = next;
     await persistence.saveSettings(next);
     notifyListeners();
+    if (prev.language != next.language) {
+      // Tray menu, tooltip and widget text are rebuilt in the new language.
+      unawaited(desktop.update(snapshots, l10n));
+      unawaited(homeWidget.publish(snapshots, l10n));
+    }
     if (prev.minimizeToTray != next.minimizeToTray) {
       await desktop.setMinimizeToTray(next.minimizeToTray);
     }
@@ -382,7 +397,7 @@ class AppController extends ChangeNotifier {
     final api = TokenBarApiClient(baseUrl: url.trim(), token: token.trim());
     try {
       final health = await api.health();
-      if (health['authenticated'] != true) return '已连接，但令牌无效';
+      if (health['authenticated'] != true) return l10n.serverTokenInvalid;
       await api.latest();
       return null;
     } catch (e) {

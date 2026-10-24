@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_info.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/app_controller.dart';
 import '../../state/settings.dart';
 import '../../state/update_controller.dart';
@@ -13,12 +14,13 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final c = context.watch<AppController>();
     final s = c.settings;
     void update(AppSettings next) => c.updateSettings(next);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(l.navSettings)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -28,50 +30,59 @@ class SettingsPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _Section('外观', [
+                  _Section(l.settingsAppearance, [
                     ListTile(
-                      title: const Text('主题'),
+                      title: Text(l.settingsTheme),
                       trailing: SegmentedButton<ThemeMode>(
                         showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment(value: ThemeMode.system, label: Text('跟随系统')),
-                          ButtonSegment(value: ThemeMode.light, label: Text('浅色')),
-                          ButtonSegment(value: ThemeMode.dark, label: Text('深色')),
+                        segments: [
+                          ButtonSegment(value: ThemeMode.system, label: Text(l.systemDefault)),
+                          ButtonSegment(value: ThemeMode.light, label: Text(l.themeLight)),
+                          ButtonSegment(value: ThemeMode.dark, label: Text(l.themeDark)),
                         ],
                         selected: {s.themeMode},
                         onSelectionChanged: (v) => update(s.copyWith(themeMode: v.first)),
                       ),
                     ),
-                  ]),
-                  _Section('刷新', [
                     ListTile(
-                      title: const Text('自动刷新间隔'),
-                      subtitle: const Text('连续失败时会自动退避，最长 30 分钟'),
+                      title: Text(l.settingsLanguage),
+                      trailing: SegmentedButton<AppLanguage>(
+                        showSelectedIcon: false,
+                        segments: [
+                          ButtonSegment(value: AppLanguage.system, label: Text(l.systemDefault)),
+                          ButtonSegment(value: AppLanguage.zh, label: Text(l.languageZh)),
+                          ButtonSegment(value: AppLanguage.en, label: Text(l.languageEn)),
+                        ],
+                        selected: {s.language},
+                        onSelectionChanged: (v) => update(s.copyWith(language: v.first)),
+                      ),
+                    ),
+                  ]),
+                  _Section(l.sectionRefresh, [
+                    ListTile(
+                      title: Text(l.autoRefreshInterval),
+                      subtitle: Text(l.autoRefreshIntervalHint),
                       trailing: DropdownButton<int>(
                         value: s.refreshMinutes,
                         underline: const SizedBox.shrink(),
-                        items: const [
-                          1,
-                          2,
-                          5,
-                          10,
-                          15,
-                          30,
-                          60,
-                        ].map((m) => DropdownMenuItem(value: m, child: Text('$m 分钟'))).toList(),
+                        items: const [1, 2, 5, 10, 15, 30, 60]
+                            .map(
+                              (m) => DropdownMenuItem(value: m, child: Text(l.refreshMinutes(m))),
+                            )
+                            .toList(),
                         onChanged: (v) => update(s.copyWith(refreshMinutes: v)),
                       ),
                     ),
                   ]),
-                  _Section('通知', [
+                  _Section(l.sectionNotifications, [
                     SwitchListTile(
-                      title: const Text('低额度提醒'),
+                      title: Text(l.lowQuotaAlerts),
                       value: s.notificationsEnabled,
                       onChanged: (v) => update(s.copyWith(notificationsEnabled: v)),
                     ),
                     ListTile(
                       enabled: s.notificationsEnabled,
-                      title: const Text('提醒阈值（剩余）'),
+                      title: Text(l.alertThresholds),
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Wrap(
@@ -94,8 +105,8 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ),
                     SwitchListTile(
-                      title: const Text('额度重置提醒'),
-                      subtitle: const Text('额度较低时重置后通知'),
+                      title: Text(l.resetAlerts),
+                      subtitle: Text(l.resetAlertsHint),
                       value: s.notifyOnReset,
                       onChanged: s.notificationsEnabled
                           ? (v) => update(s.copyWith(notifyOnReset: v))
@@ -104,32 +115,29 @@ class SettingsPage extends StatelessWidget {
                   ]),
                   const _SyncSection(),
                   if (isDesktopPlatform)
-                    _Section('数据源', [
+                    _Section(l.sectionDataSources, [
                       SwitchListTile(
-                        title: const Text('允许调用 Codex CLI 兜底'),
-                        subtitle: const Text('OAuth 令牌过期时通过 `codex app-server` 读取额度（由 CLI 负责刷新登录）'),
+                        title: Text(l.allowCliFallback),
+                        subtitle: Text(l.allowCliFallbackHint),
                         value: s.allowCliFallback,
                         onChanged: (v) => update(s.copyWith(allowCliFallback: v)),
                       ),
                       SwitchListTile(
-                        title: const Text('允许 TokenBar 刷新 Claude 令牌'),
-                        subtitle: const Text(
-                          '令牌过期时由 TokenBar 刷新并写回 ~/.claude/.credentials.json。'
-                          '刷新会轮换 refresh token，若 Claude Code 正在运行可能需要重新登录。默认关闭。',
-                        ),
+                        title: Text(l.allowClaudeRefresh),
+                        subtitle: Text(l.allowClaudeRefreshHint),
                         value: s.allowClaudeRefresh,
                         onChanged: (v) => update(s.copyWith(allowClaudeRefresh: v)),
                       ),
                     ]),
                   if (isDesktopPlatform)
-                    _Section('桌面', [
+                    _Section(l.sectionDesktop, [
                       SwitchListTile(
-                        title: const Text('开机自动启动'),
+                        title: Text(l.launchAtStartup),
                         value: s.launchAtStartup,
                         onChanged: (v) => update(s.copyWith(launchAtStartup: v)),
                       ),
                       SwitchListTile(
-                        title: const Text('关闭窗口时最小化到托盘'),
+                        title: Text(l.minimizeToTray),
                         value: s.minimizeToTray,
                         onChanged: (v) => update(s.copyWith(minimizeToTray: v)),
                       ),
@@ -149,27 +157,28 @@ class SettingsPage extends StatelessWidget {
 class _AboutSection extends StatelessWidget {
   const _AboutSection();
 
-  static String _status(UpdateController u) => switch (u.status) {
+  static String _status(AppLocalizations l, UpdateController u) => switch (u.status) {
     UpdateStatus.idle => '',
-    UpdateStatus.checking => '正在检查…',
-    UpdateStatus.upToDate => '已是最新版本',
-    UpdateStatus.available => '发现新版本 ${u.release?.tag ?? ''}',
+    UpdateStatus.checking => l.updateChecking,
+    UpdateStatus.upToDate => l.upToDate,
+    UpdateStatus.available => l.newVersionAvailable(u.release?.tag ?? ''),
     UpdateStatus.error => switch (u.errorCode) {
-      'rate_limit' => '检查失败：请求过于频繁，请稍后再试',
-      'network' => '检查失败：无法连接 GitHub',
-      _ => '检查失败：GitHub 返回了无法识别的数据',
+      'rate_limit' => l.checkFailedRateLimit,
+      'network' => l.checkFailedNetwork,
+      _ => l.checkFailedFormat,
     },
   };
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final c = context.watch<AppController>();
     final u = context.watch<UpdateController>();
     final theme = Theme.of(context);
-    final status = _status(u);
+    final status = _status(l, u);
     final available = u.status == UpdateStatus.available && u.release != null;
     final version = u.currentVersion.isEmpty ? '' : ' ${u.currentVersion}';
-    return _Section('关于', [
+    return _Section(l.sectionAbout, [
       ListTile(
         title: Text('TokenBar$version'),
         subtitle: status.isEmpty
@@ -187,7 +196,7 @@ class _AboutSection extends StatelessWidget {
         trailing: available
             ? FilledButton(
                 onPressed: () => showUpdateDialog(context, u, u.release!),
-                child: const Text('查看更新'),
+                child: Text(l.viewUpdate),
               )
             : OutlinedButton(
                 onPressed: u.status == UpdateStatus.checking ? null : () => u.check(manual: true),
@@ -197,28 +206,22 @@ class _AboutSection extends StatelessWidget {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('检查更新'),
+                    : Text(l.checkForUpdates),
               ),
       ),
       SwitchListTile(
-        title: const Text('启动时自动检查更新'),
-        subtitle: const Text('仅向 GitHub 请求最新版本号，不发送任何账号或使用数据'),
+        title: Text(l.autoCheckUpdates),
+        subtitle: Text(l.autoCheckUpdatesHint),
         value: c.settings.autoCheckUpdates,
         onChanged: (v) => c.updateSettings(c.settings.copyWith(autoCheckUpdates: v)),
       ),
       ListTile(
-        title: const Text('项目主页'),
+        title: Text(l.projectHome),
         subtitle: const Text('github.com/$kUpdateRepo'),
         trailing: const Icon(Icons.open_in_new, size: 18),
         onTap: () => openReleasePage(kRepoUrl),
       ),
-      const ListTile(
-        subtitle: Text(
-          '开源跨平台 AI 额度监控（MIT）。数据获取方式参考 steipete/CodexBar。'
-          '直接向各服务商官方接口查询，复用本机客户端的登录状态（只读），不收集账号密码；'
-          '可选的自建服务器只保存额度快照，不保存令牌。',
-        ),
-      ),
+      ListTile(subtitle: Text(l.aboutBlurb)),
     ]);
   }
 }
@@ -263,6 +266,7 @@ class _SyncSectionState extends State<_SyncSection> {
   late final TextEditingController _token;
   late final TextEditingController _device;
   String? _testResult;
+  bool _testOk = false;
   bool _testing = false;
 
   @override
@@ -292,7 +296,8 @@ class _SyncSectionState extends State<_SyncSection> {
       ),
     );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已保存同步设置')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).savedSyncSettings)));
     }
   }
 
@@ -303,14 +308,17 @@ class _SyncSectionState extends State<_SyncSection> {
     });
     final error = await context.read<AppController>().testServer(_url.text, _token.text);
     if (!mounted) return;
+    final l = AppLocalizations.of(context);
     setState(() {
       _testing = false;
-      _testResult = error == null ? '连接成功' : '连接失败：$error';
+      _testOk = error == null;
+      _testResult = error == null ? l.connectionOk : l.connectionFailed(error);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final c = context.watch<AppController>();
     final s = c.settings;
     final theme = Theme.of(context);
@@ -325,7 +333,7 @@ class _SyncSectionState extends State<_SyncSection> {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
           child: SegmentedButton<SyncMode>(
             showSelectedIcon: false,
-            segments: [for (final m in modes) ButtonSegment(value: m, label: Text(m.label))],
+            segments: [for (final m in modes) ButtonSegment(value: m, label: Text(m.label(l)))],
             selected: {s.syncMode},
             onSelectionChanged: (v) => c.updateSettings(s.copyWith(syncMode: v.first)),
           ),
@@ -333,10 +341,9 @@ class _SyncSectionState extends State<_SyncSection> {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
         child: Text(switch (s.syncMode) {
-          SyncMode.local => '所有账户都由本机直接向官方查询，不需要服务器。',
-          SyncMode.server =>
-            kIsWeb ? '显示各设备推送到本服务器的额度数据。' : '在本机账户之外，再显示其他设备推送到自建服务器的账户（例如电脑上的 Codex / Claude）。',
-          SyncMode.localPush => '把本机查询结果推送到自建服务器，供手机和网页查看；同时显示服务器上其他设备的账户。',
+          SyncMode.local => l.syncDescLocal,
+          SyncMode.server => kIsWeb ? l.syncDescServerWeb : l.syncDescServerDesktop,
+          SyncMode.localPush => l.syncDescPush,
         }, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       ),
       if (s.syncMode.usesServer)
@@ -347,8 +354,8 @@ class _SyncSectionState extends State<_SyncSection> {
             children: [
               TextField(
                 controller: _url,
-                decoration: const InputDecoration(
-                  labelText: '服务器地址',
+                decoration: InputDecoration(
+                  labelText: l.serverUrl,
                   hintText: 'https://tokenbar.example.com',
                 ),
                 keyboardType: TextInputType.url,
@@ -358,25 +365,25 @@ class _SyncSectionState extends State<_SyncSection> {
                 controller: _token,
                 obscureText: true,
                 decoration: InputDecoration(
-                  labelText: '访问令牌',
+                  labelText: l.accessToken,
                   helperText: s.syncMode == SyncMode.localPush
-                      ? '推送需要管理员令牌 (TOKENBAR_TOKEN)'
-                      : '只读令牌或管理员令牌',
+                      ? l.tokenHelperPush
+                      : l.tokenHelperRead,
                 ),
               ),
               if (s.syncMode == SyncMode.localPush) ...[
                 const SizedBox(height: 8),
                 TextField(
                   controller: _device,
-                  decoration: const InputDecoration(labelText: '设备名称', hintText: '例如：办公室电脑'),
+                  decoration: InputDecoration(labelText: l.deviceName, hintText: l.deviceNameHint),
                 ),
               ],
               const SizedBox(height: 12),
               Row(
                 children: [
-                  FilledButton(onPressed: _save, child: const Text('保存')),
+                  FilledButton(onPressed: _save, child: Text(l.save)),
                   const SizedBox(width: 8),
-                  OutlinedButton(onPressed: _testing ? null : _test, child: const Text('测试连接')),
+                  OutlinedButton(onPressed: _testing ? null : _test, child: Text(l.testConnection)),
                   const SizedBox(width: 12),
                   if (_testing)
                     const SizedBox(
@@ -389,9 +396,7 @@ class _SyncSectionState extends State<_SyncSection> {
                       child: Text(
                         _testResult!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: _testResult == '连接成功'
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.error,
+                          color: _testOk ? theme.colorScheme.primary : theme.colorScheme.error,
                         ),
                       ),
                     ),
@@ -401,15 +406,15 @@ class _SyncSectionState extends State<_SyncSection> {
           ),
         ),
     ];
-    if (kIsWeb) return _Section('服务器', content);
-    return _Section('服务器同步（可选）', [
+    if (kIsWeb) return _Section(l.sectionServer, content);
+    return _Section(l.sectionSyncOptional, [
       ExpansionTile(
         initiallyExpanded: s.syncMode.usesServer,
         shape: const Border(),
         collapsedShape: const Border(),
-        title: Text(s.syncMode.usesServer ? '已启用：${s.syncMode.label}' : '未启用'),
+        title: Text(s.syncMode.usesServer ? l.syncEnabled(s.syncMode.label(l)) : l.syncDisabled),
         subtitle: Text(
-          '不需要服务器也能使用。只有想在手机或网页上查看电脑上的额度时，才需要自建 TokenBar 服务器。',
+          l.syncOptionalHint,
           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         children: content,

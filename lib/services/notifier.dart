@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// Thin wrapper over flutter_local_notifications; no-op where unsupported.
 class Notifier {
   final _plugin = FlutterLocalNotificationsPlugin();
@@ -13,16 +15,16 @@ class Notifier {
     requestBadgePermission: false,
   );
 
-  Future<void> init() async {
+  Future<void> init(AppLocalizations l10n) async {
     if (kIsWeb) return;
     try {
       _ready =
           await _plugin.initialize(
-            settings: const InitializationSettings(
-              android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+            settings: InitializationSettings(
+              android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
               iOS: _darwin,
               macOS: _darwin,
-              linux: LinuxInitializationSettings(defaultActionName: '打开 TokenBar'),
+              linux: LinuxInitializationSettings(defaultActionName: l10n.openTokenBar),
               windows: WindowsInitializationSettings(
                 appName: 'TokenBar',
                 appUserModelId: 'TokenBar.TokenBar.App',
@@ -55,18 +57,18 @@ class Notifier {
     }
   }
 
-  Future<void> show(String title, String body) async {
+  Future<void> show(String title, String body, AppLocalizations l10n) async {
     if (!_ready) return;
     try {
       await _plugin.show(
         id: _nextId++,
         title: title,
         body: body,
-        notificationDetails: const NotificationDetails(
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             'quota',
-            '额度提醒',
-            channelDescription: '低额度和额度重置提醒',
+            l10n.notificationChannelName,
+            channelDescription: l10n.notificationChannelDescription,
             importance: Importance.high,
             priority: Priority.high,
           ),

@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Offset, Rect, Size;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -10,6 +12,7 @@ import 'package:tokenbar_core/tokenbar_core.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../l10n/app_localizations.dart';
 import '../ui/format.dart';
 import '../ui/tray_panel.dart';
 
@@ -40,7 +43,11 @@ class DesktopIntegration with TrayListener, WindowListener {
   bool _panelBusy = false;
   DateTime _panelHiddenAt = DateTime.fromMillisecondsSinceEpoch(0);
 
-  Future<void> init({required void Function() onRefresh, required bool minimizeToTray}) async {
+  Future<void> init({
+    required void Function() onRefresh,
+    required bool minimizeToTray,
+    required AppLocalizations l10n,
+  }) async {
     if (!supported) return;
     _onRefresh = onRefresh;
     _minimizeToTray = minimizeToTray;
@@ -63,7 +70,7 @@ class DesktopIntegration with TrayListener, WindowListener {
       trayManager.addListener(this);
       await _setIcon(null, null, false);
       await trayManager.setToolTip('TokenBar');
-      await _setMenu(const []);
+      await _setMenu(l10n, const []);
       _trayReady = true;
     } catch (e) {
       // Some Linux desktops have no tray; the window still works.
@@ -81,7 +88,7 @@ class DesktopIntegration with TrayListener, WindowListener {
     }
   }
 
-  Future<void> update(List<UsageSnapshot> snapshots) async {
+  Future<void> update(List<UsageSnapshot> snapshots, AppLocalizations l10n) async {
     if (!supported || !_trayReady) return;
     final height = TrayPanel.heightFor(snapshots);
     if (height != _panelHeight) {
@@ -107,13 +114,13 @@ class DesktopIntegration with TrayListener, WindowListener {
     for (final s in snapshots) {
       final name = s.accountLabel ?? s.providerId;
       if (s.windows.isEmpty) {
-        lines.add('$name: ${s.error ?? '无数据'}');
+        lines.add('$name: ${s.error ?? l10n.noData}');
         continue;
       }
       final parts = s.windows.take(2).map((w) {
         final reset = w.timeUntilReset(now);
-        return '${windowLabel(w)} ${formatPercent(w.remainingPercent)}'
-            '${reset == null ? '' : ' (${countdownZh(reset)})'}';
+        return '${windowLabel(l10n, w)} ${formatPercent(w.remainingPercent)}'
+            '${reset == null ? '' : ' (${countdownLabel(l10n, reset)})'}';
       });
       lines.add('$name: ${parts.join(' · ')}');
     }
@@ -124,13 +131,17 @@ class DesktopIntegration with TrayListener, WindowListener {
     if (Platform.isMacOS && focus != null) {
       await trayManager.setTitle(formatPercent(focus.tightestWindow!.remainingPercent));
     }
-    await _setMenu(lines);
+    await _setMenu(l10n, lines);
   }
 
   Future<void> _setIcon(double? top, double? bottom, bool error) async {
     final key = '${top?.round()}|${bottom?.round()}|$error';
     if (key == _lastIconKey) return;
     _lastIconKey = key;
+    if (Platform.isMacOS) {
+      await _setMacIcon(top, bottom, error);
+      return;
+    }
     final png = TrayIconRenderer.renderPng(top: top, bottom: bottom, error: error);
     final dir = await getTemporaryDirectory();
     // A fresh file name per change: some platforms cache icons by path.
@@ -145,15 +156,34 @@ class DesktopIntegration with TrayListener, WindowListener {
     }
   }
 
-  Future<void> _setMenu(List<String> lines) => trayManager.setContextMenu(
+  /// tray_manager's macOS `setIcon` reads the icon with `rootBundle.load`, so it
+  /// only accepts assets bundled in the app and throws for the generated icon
+  /// (which made the whole tray unavailable on macOS). The native side only needs
+  /// the PNG bytes as base64, so talk to the plugin's channel directly.
+  Future<void> _setMacIcon(double? top, double? bottom, bool error) async {
+    // Drawn at 64 px and shown at 18 pt, so it stays sharp on Retina menu bars.
+    final png = TrayIconRenderer.renderPng(top: top, bottom: bottom, error: error, size: 64);
+    await _trayChannel.invokeMethod<void>('setIcon', <String, Object>{
+      'id': 'tokenbar-tray',
+      'iconPath': '',
+      'base64Icon': base64Encode(png),
+      'isTemplate': false, // keep the colours; a template icon would be monochrome
+      'iconPosition': 'left',
+      'iconSize': 18,
+    });
+  }
+
+  static const _trayChannel = MethodChannel('tray_manager');
+
+  Future<void> _setMenu(AppLocalizations l10n, List<String> lines) => trayManager.setContextMenu(
     Menu(
       items: [
         for (final line in lines) MenuItem(label: line, disabled: true),
         if (lines.isNotEmpty) MenuItem.separator(),
-        MenuItem(key: 'show', label: '打开 TokenBar'),
-        MenuItem(key: 'refresh', label: '立即刷新'),
+        MenuItem(key: 'show', label: l10n.openTokenBar),
+        MenuItem(key: 'refresh', label: l10n.refreshNow),
         MenuItem.separator(),
-        MenuItem(key: 'quit', label: '退出'),
+        MenuItem(key: 'quit', label: l10n.quit),
       ],
     ),
   );

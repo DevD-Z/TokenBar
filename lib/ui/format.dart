@@ -1,57 +1,99 @@
 import 'package:tokenbar_core/tokenbar_core.dart';
 
-/// Chinese labels for well-known window ids; falls back to the provider label.
-String windowLabel(RateWindow w) {
+import '../l10n/app_localizations.dart';
+
+/// Label for a quota window. Known ids get fixed text; other labels come from
+/// the provider and are translated only where they use a common term.
+String windowLabel(AppLocalizations l, RateWindow w) {
   switch (w.id) {
     case RateWindow.sessionId:
-      return '5 小时';
+      return l.labelFiveHour;
     case RateWindow.weeklyId:
-      return '每周';
+      return l.labelWeekly;
     case 'weekly_opus':
-      return 'Opus 每周';
+      return l.windowOpusWeekly;
     case 'weekly_sonnet':
-      return 'Sonnet 每周';
+      return l.windowSonnetWeekly;
     case 'cursor-total':
-      return '本月额度';
+      return l.cursorMonthlyQuota;
     case 'cursor-auto':
       return 'Auto / Composer';
     case 'cursor-api':
-      return 'API 模型';
+      return l.cursorApiModels;
   }
-  return w.label
-      .replaceAll('Weekly', '每周')
-      .replaceAll('5-hour', '5 小时')
-      .replaceAllMapped(RegExp(r'(\d+)-hour'), (m) => '${m[1]} 小时')
-      .replaceAllMapped(RegExp(r'(\d+)-day'), (m) => '${m[1]} 天');
+  return _coreLabel(l, w.label);
 }
 
-String creditsLabel(Credits c) => switch (c.id) {
-  'codex-credits' => 'Credits 余额',
-  'codex-spend-limit' => '月度 Credits 上限',
-  'claude-extra-usage' => '额外用量',
-  'cursor-plan' => '本月用量',
-  'cursor-on-demand' => '按需用量',
-  'cursor-team-on-demand' => '团队按需用量',
+/// Provider-supplied labels (Chinese in core) with the common period words
+/// translated. Labels with no known term are returned unchanged.
+String _coreLabel(AppLocalizations l, String text) {
+  final exact = switch (text) {
+    'Weekly' || '每周' => l.labelWeekly,
+    'Monthly' || '每月' => l.labelMonthly,
+    'Daily' || '每日' => l.labelDaily,
+    'Today' || '今日' => l.labelToday,
+    'This month' || '本月' => l.labelThisMonth,
+    '额度' => l.labelQuota,
+    _ => null,
+  };
+  if (exact != null) return exact;
+  var out = text
+      .replaceAll('Weekly', l.labelWeekly)
+      .replaceAll('每周', l.labelWeekly)
+      .replaceAll('Monthly', l.labelMonthly)
+      .replaceAll('每月', l.labelMonthly)
+      .replaceAll('Daily', l.labelDaily)
+      .replaceAll('每日', l.labelDaily)
+      .replaceAll('5 小时', l.labelFiveHour);
+  out = out.replaceAllMapped(RegExp(r'(\d+)-hour'), (m) => l.labelHours(int.parse(m[1]!)));
+  out = out.replaceAllMapped(RegExp(r'(\d+)-day'), (m) => l.labelDays(int.parse(m[1]!)));
+  return out;
+}
+
+String creditsLabel(AppLocalizations l, Credits c) => switch (c.id) {
+  'codex-credits' => l.creditsBalance,
+  'codex-spend-limit' => l.creditsSpendLimit,
+  'claude-extra-usage' => l.extraUsage,
+  'cursor-plan' => l.cursorPlanUsage,
+  'cursor-on-demand' => l.cursorOnDemand,
+  'cursor-team-on-demand' => l.cursorTeamOnDemand,
   _ => c.label,
 };
 
-String countdownZh(Duration d) {
-  if (d.inSeconds <= 0) return '即将重置';
-  if (d.inMinutes < 1) return '不到 1 分钟';
+/// `2d 3h`, `5h 4m`, `45m` (or the localized equivalents).
+String countdownLabel(AppLocalizations l, Duration d) {
+  if (d.inSeconds <= 0) return l.resetImminent;
+  if (d.inMinutes < 1) return l.lessThanMinute;
   final days = d.inDays;
   final hours = d.inHours % 24;
   final minutes = d.inMinutes % 60;
-  if (days > 0) return hours > 0 ? '$days天$hours小时' : '$days天';
-  if (d.inHours > 0) return minutes > 0 ? '${d.inHours}小时$minutes分' : '${d.inHours}小时';
-  return '$minutes分钟';
+  if (days > 0) {
+    return hours > 0 ? l.countdownDaysHours(days, hours) : l.countdownDays(days);
+  }
+  if (d.inHours > 0) {
+    return minutes > 0 ? l.countdownHoursMinutes(d.inHours, minutes) : l.countdownHours(d.inHours);
+  }
+  return l.countdownMinutes(minutes);
 }
 
-const _weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+/// "Resets in 2h 5m"; "Resetting soon" once the reset time has passed.
+String resetsInLabel(AppLocalizations l, Duration d) =>
+    d.inSeconds <= 0 ? l.resetImminent : l.resetsIn(countdownLabel(l, d));
 
 String two(int v) => v.toString().padLeft(2, '0');
 
+String _weekday(AppLocalizations l, int weekday) => switch (weekday) {
+  DateTime.monday => l.weekdayMon,
+  DateTime.tuesday => l.weekdayTue,
+  DateTime.wednesday => l.weekdayWed,
+  DateTime.thursday => l.weekdayThu,
+  DateTime.friday => l.weekdayFri,
+  DateTime.saturday => l.weekdaySat,
+  _ => l.weekdaySun,
+};
+
 /// `14:30`, `明天 09:00`, `周五 14:30`, `11月3日 08:00`.
-String resetTimeZh(DateTime at, DateTime now) {
+String resetTimeLabel(AppLocalizations l, DateTime at, DateTime now) {
   final local = at.toLocal();
   final n = now.toLocal();
   final today = DateTime(n.year, n.month, n.day);
@@ -59,17 +101,18 @@ String resetTimeZh(DateTime at, DateTime now) {
   final diffDays = day.difference(today).inDays;
   final time = '${two(local.hour)}:${two(local.minute)}';
   if (diffDays == 0) return time;
-  if (diffDays == 1) return '明天 $time';
-  if (diffDays > 1 && diffDays < 7) return '${_weekdays[local.weekday - 1]} $time';
-  return '${local.month}月${local.day}日 $time';
+  if (diffDays == 1) return l.resetTomorrow(time);
+  if (diffDays > 1 && diffDays < 7) return l.resetWeekday(_weekday(l, local.weekday), time);
+  return l.resetDate(l.monthDay(local.month, local.day), time);
 }
 
-String agoZh(DateTime at, DateTime now) {
+/// `刚刚`, `5 分钟前`, `3 小时前`, `2 天前` (or the English equivalents).
+String agoLabel(AppLocalizations l, DateTime at, DateTime now) {
   final d = now.difference(at);
-  if (d.inSeconds < 45) return '刚刚';
-  if (d.inMinutes < 60) return '${d.inMinutes} 分钟前';
-  if (d.inHours < 24) return '${d.inHours} 小时前';
-  return '${d.inDays} 天前';
+  if (d.inSeconds < 45) return l.justNow;
+  if (d.inMinutes < 60) return l.minutesAgo(d.inMinutes);
+  if (d.inHours < 24) return l.hoursAgo(d.inHours);
+  return l.daysAgo(d.inDays);
 }
 
 String planLabel(String? plan) {
@@ -78,28 +121,28 @@ String planLabel(String? plan) {
   return p[0].toUpperCase() + p.substring(1);
 }
 
-String sourceLabel(String? source) => switch (source) {
+String sourceLabel(AppLocalizations l, String? source) => switch (source) {
   'oauth' => 'OAuth',
   'cli-rpc' => 'Codex CLI',
   'api-key' => 'API Key',
-  'cursor-app' => 'Cursor 本机登录',
+  'cursor-app' => l.sourceCursorLocal,
   'cursor-agent' => 'cursor-agent',
   'cookie' => 'Cookie',
-  'remote' => '服务器',
+  'remote' => l.sourceServer,
   null => '',
   final other => other,
 };
 
-String sourceTypeLabel(String providerId, SourceType type) {
+String sourceTypeLabel(AppLocalizations l, String providerId, SourceType type) {
   final provider = ProviderRegistry.instance.byId(providerId);
   return switch (type) {
-    SourceType.localCli => provider?.localSourceLabel ?? '本机登录',
+    SourceType.localCli => provider?.localSourceLabel ?? l.localLogin,
     SourceType.apiKey => provider?.manualSourceLabel ?? 'API Key',
   };
 }
 
-String creditsValue(Credits c) {
-  if (c.unlimited) return '无限';
+String creditsValue(AppLocalizations l, Credits c) {
+  if (c.unlimited) return l.unlimited;
   if (c.used != null && c.limit != null) {
     return '${formatMoney(c.used!, c.currency)} / ${formatMoney(c.limit!, c.currency)}';
   }

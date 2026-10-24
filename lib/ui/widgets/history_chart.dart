@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
 import '../../app/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../format.dart';
 import '../history_series.dart';
 
@@ -57,9 +58,10 @@ class _HistoryChartState extends State<HistoryChart> {
     };
   }
 
-  String _label(HistoryMetric metric, String id) => metric == HistoryMetric.usage
+  String _label(AppLocalizations l, HistoryMetric metric, String id) =>
+      metric == HistoryMetric.usage
       ? (widget.windowLabels[id] ?? id)
-      : (widget.credits[id] == null ? id : creditsLabel(widget.credits[id]!));
+      : (widget.credits[id] == null ? id : creditsLabel(l, widget.credits[id]!));
 
   String _amount(HistoryMetric metric, String id, double value) {
     if (metric == HistoryMetric.usage) return '+${formatPercent(value)}';
@@ -69,6 +71,7 @@ class _HistoryChartState extends State<HistoryChart> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     if (widget.points.length < 2) {
@@ -76,7 +79,7 @@ class _HistoryChartState extends State<HistoryChart> {
         height: 220,
         child: Center(
           child: Text(
-            '历史数据不足，自动刷新后会逐渐积累',
+            l.historyNotEnough,
             style: theme.textTheme.bodyMedium?.copyWith(color: muted),
           ),
         ),
@@ -108,9 +111,9 @@ class _HistoryChartState extends State<HistoryChart> {
           children: [
             if (_usageIds.isNotEmpty && _costIds.isNotEmpty)
               SegmentedButton<HistoryMetric>(
-                segments: const [
-                  ButtonSegment(value: HistoryMetric.usage, label: Text('额度用量')),
-                  ButtonSegment(value: HistoryMetric.cost, label: Text('费用')),
+                segments: [
+                  ButtonSegment(value: HistoryMetric.usage, label: Text(l.metricUsage)),
+                  ButtonSegment(value: HistoryMetric.cost, label: Text(l.metricCost)),
                 ],
                 selected: {metric},
                 showSelectedIcon: false,
@@ -129,7 +132,7 @@ class _HistoryChartState extends State<HistoryChart> {
                 selected: selection.contains(id),
                 showCheckmark: false,
                 avatar: CircleAvatar(radius: 5, backgroundColor: colorOf(id)),
-                label: Text(_label(metric, id)),
+                label: Text(_label(l, metric, id)),
                 visualDensity: VisualDensity.compact,
                 onSelected: (on) => setState(() {
                   final next = {...selection};
@@ -150,8 +153,10 @@ class _HistoryChartState extends State<HistoryChart> {
             child: Center(
               child: Text(
                 selection.isEmpty
-                    ? '请至少选择一项'
-                    : '这段时间内没有${metric == HistoryMetric.usage ? '用量' : '费用'}变化',
+                    ? l.selectAtLeastOne
+                    : metric == HistoryMetric.usage
+                    ? l.noUsageChanges
+                    : l.noCostChanges,
                 style: theme.textTheme.bodyMedium?.copyWith(color: muted),
               ),
             ),
@@ -168,16 +173,13 @@ class _HistoryChartState extends State<HistoryChart> {
           _Breakdown(
             data: data,
             colorOf: colorOf,
-            label: (id) => _label(metric, id),
+            label: (id) => _label(l, metric, id),
             amount: (id, v) => _amount(metric, id, v),
           ),
           if (metric == HistoryMetric.usage)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                '用量为各额度窗口在该时段内新增的已用百分比；不同窗口可能统计同一批请求，可用上方标签选择要叠加的项。',
-                style: theme.textTheme.labelSmall?.copyWith(color: muted),
-              ),
+              child: Text(l.usageNote, style: theme.textTheme.labelSmall?.copyWith(color: muted)),
             ),
         ],
       ],
@@ -191,6 +193,7 @@ class _HistoryChartState extends State<HistoryChart> {
     Color Function(String) colorOf,
     double chartWidth,
   ) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final gridColor = theme.colorScheme.onSurface.withValues(alpha: 0.07);
     final count = data.bucketStarts.length;
@@ -216,7 +219,7 @@ class _HistoryChartState extends State<HistoryChart> {
     String bucketTitle(int i) {
       final t = data.bucketStarts[i];
       if (dayLabels && bucketFor(widget.range) >= const Duration(days: 1)) {
-        return '${t.month}月${t.day}日';
+        return l.monthDay(t.month, t.day);
       }
       return '${t.month}/${t.day} ${two(t.hour)}:00';
     }
@@ -301,7 +304,7 @@ class _HistoryChartState extends State<HistoryChart> {
                       children: [
                         TextSpan(
                           text:
-                              '${_label(metric, id)}  ${_amount(metric, id, bucket[id]!).replaceFirst('+', '')}'
+                              '${_label(l, metric, id)}  ${_amount(metric, id, bucket[id]!).replaceFirst('+', '')}'
                               '  ${(bucket[id]! / total * 100).round()}%\n',
                           style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
                         ),

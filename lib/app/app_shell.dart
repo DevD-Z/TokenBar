@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/update_controller.dart';
 import '../ui/pages/accounts_page.dart';
 import '../ui/pages/dashboard_page.dart';
@@ -40,16 +41,16 @@ class _AppShellState extends State<AppShell> {
     if (release != null) showUpdateDialog(context, updates, release);
   }
 
-  static const _destinations = [
-    (Icons.speed_outlined, Icons.speed, '额度'),
-    (Icons.people_outline, Icons.people, '账户'),
-    (Icons.settings_outlined, Icons.settings, '设置'),
-  ];
-
   void _go(int i) => setState(() => _index = i);
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final destinations = [
+      (Icons.speed_outlined, Icons.speed, l.navQuota),
+      (Icons.people_outline, Icons.people, l.navAccounts),
+      (Icons.settings_outlined, Icons.settings, l.navSettings),
+    ];
     final pages = [
       DashboardPage(onOpenSettings: () => _go(2), onOpenAccounts: () => _go(1)),
       const AccountsPage(),
@@ -62,7 +63,7 @@ class _AppShellState extends State<AppShell> {
       return Scaffold(
         body: Row(
           children: [
-            _Sidebar(index: _index, onSelect: _go, destinations: _destinations),
+            _Sidebar(index: _index, onSelect: _go, destinations: destinations),
             Expanded(child: body),
           ],
         ),
@@ -74,7 +75,7 @@ class _AppShellState extends State<AppShell> {
         selectedIndex: _index,
         onDestinationSelected: _go,
         destinations: [
-          for (final d in _destinations)
+          for (final d in destinations)
             NavigationDestination(icon: Icon(d.$1), selectedIcon: Icon(d.$2), label: d.$3),
         ],
       ),

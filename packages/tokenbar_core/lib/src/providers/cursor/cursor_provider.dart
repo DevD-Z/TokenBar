@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
+
 import '../../models/account.dart';
 import '../../models/usage_snapshot.dart';
 import '../../platform/platform.dart' as platform;
@@ -8,6 +10,7 @@ import '../../util/json_utils.dart';
 import '../fields.dart';
 import '../provider.dart';
 import 'cursor_session.dart';
+import 'cursor_usage_events.dart';
 import 'cursor_usage_parser.dart';
 
 /// Cursor plan usage from cursor.com's dashboard API, authenticated with the
@@ -15,6 +18,13 @@ import 'cursor_usage_parser.dart';
 class CursorProvider extends UsageProvider {
   static const _baseUrl = 'https://cursor.com';
   static final Map<String, String?> _emailByCookie = {};
+
+  /// Events per page, as CodexBar's `CursorUsageEventsFetcher` requests.
+  static const _eventPageSize = 1000;
+
+  /// Safety cap: 20 pages (20k events) per billing cycle. Beyond that the per-model
+  /// rows are reported as unavailable rather than summed from a partial list.
+  static const _maxEventPages = 20;
 
   @override
   String get id => 'cursor';
@@ -75,6 +85,7 @@ class CursorProvider extends UsageProvider {
       _email(session, ctx),
     ]);
     final usage = parseCursorUsageSummary(results[0] as Map<String, Object?>);
+    final models = await _modelUsage(session, usage.cycleStart, ctx);
     return UsageSnapshot(
       accountId: account.id,
       providerId: id,
@@ -88,7 +99,58 @@ class CursorProvider extends UsageProvider {
       },
       windows: usage.windows,
       credits: usage.credits,
+      extras: cursorModelExtras(models),
     );
+  }
+
+  /// Per-model usage for the current billing cycle from the dashboard events feed.
+  ///
+  /// Best-effort: any failure or unrecognised page yields null (shown as unavailable),
+  /// and never fails the quota snapshot itself.
+  Future<List<CursorModelUsage>?> _modelUsage(
+    CursorSession session,
+    DateTime? cycleStart,
+    FetchContext ctx,
+  ) async {
+    if (cycleStart == null) return null;
+    try {
+      final pages = <List<CursorUsageEvent>>[];
+      int? expectedTotal;
+      var completed = false;
+      for (var page = 1; page <= _maxEventPages; page++) {
+        final json = await _post(
+          '/api/dashboard/get-filtered-usage-events',
+          {
+            'page': page,
+            'pageSize': _eventPageSize,
+            'startDate': '${cycleStart.millisecondsSinceEpoch}',
+            'endDate': '${ctx.now().millisecondsSinceEpoch}',
+          },
+          session,
+          ctx,
+        );
+        final parsed = parseCursorUsageEventsPage(json);
+        if (parsed == null) return null;
+        if (parsed.total != null) {
+          if (expectedTotal != null && expectedTotal != parsed.total) return null;
+          expectedTotal = parsed.total;
+        }
+        if (parsed.events.isEmpty) {
+          completed = true;
+          break;
+        }
+        pages.add(parsed.events);
+        if (parsed.events.length < _eventPageSize) {
+          completed = true;
+          break;
+        }
+      }
+      if (!completed) return null;
+      final events = reconcileCursorEventPages(pages, expectedTotal);
+      return events == null ? null : summarizeCursorModelUsage(events);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<CursorSession> _session(AccountConfig account) async {
@@ -120,6 +182,32 @@ class CursorProvider extends UsageProvider {
           headers: {'Accept': 'application/json', 'Cookie': session.cookieHeader},
         )
         .timeout(const Duration(seconds: 20));
+    return _decode(response, session);
+  }
+
+  /// POST with a JSON body. Cursor enforces CSRF on these endpoints, so `Origin` must match.
+  Future<Map<String, Object?>> _post(
+    String path,
+    Map<String, Object?> body,
+    CursorSession session,
+    FetchContext ctx,
+  ) async {
+    final response = await ctx.client
+        .post(
+          Uri.parse('$_baseUrl$path'),
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Cookie': session.cookieHeader,
+            'Origin': _baseUrl,
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 20));
+    return _decode(response, session);
+  }
+
+  Map<String, Object?> _decode(http.Response response, CursorSession session) {
     if (response.statusCode == 401 || response.statusCode == 403) {
       throw ProviderException(
         'Cursor 拒绝了登录凭证 (HTTP ${response.statusCode})',

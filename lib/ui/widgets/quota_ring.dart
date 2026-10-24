@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class QuotaRing extends StatelessWidget {
   const QuotaRing({
@@ -20,6 +21,7 @@ class QuotaRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final color = quotaColor(remaining, theme.brightness);
     return Column(
@@ -49,7 +51,7 @@ class QuotaRing extends StatelessWidget {
                         color: color,
                       ),
                     ),
-                    Text('剩余', style: theme.textTheme.labelSmall),
+                    Text(l.remainingSuffix, style: theme.textTheme.labelSmall),
                   ],
                 ),
               ),

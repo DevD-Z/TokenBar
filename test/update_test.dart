@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:token_bar/l10n/app_localizations.dart';
 import 'package:token_bar/services/update/app_version.dart';
 import 'package:token_bar/services/update/update_service.dart';
 import 'package:token_bar/state/settings.dart';
@@ -193,6 +195,12 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => showUpdateDialog(context, updates, release),

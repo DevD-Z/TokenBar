@@ -2,6 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tokenbar_core/tokenbar_core.dart' show localAccessSupported;
 
+import '../l10n/app_localizations.dart';
+
+/// Interface language. [system] follows the device: Chinese when the device's
+/// primary language is Chinese, English otherwise.
+enum AppLanguage { system, zh, en }
+
 /// Optional self-hosted server sync. Accounts added on this device are always
 /// fetched directly from the provider (except on web, which has no local
 /// access and is served by the server itself).
@@ -15,10 +21,10 @@ enum SyncMode {
   /// Also push this device's results to the server.
   localPush;
 
-  String get label => switch (this) {
-    SyncMode.local => '不使用',
-    SyncMode.server => '查看服务器数据',
-    SyncMode.localPush => '推送本机数据',
+  String label(AppLocalizations l) => switch (this) {
+    SyncMode.local => l.syncModeOff,
+    SyncMode.server => l.syncModeServerView,
+    SyncMode.localPush => l.syncModePush,
   };
 
   bool get fetchesLocally => !kIsWeb;
@@ -43,6 +49,7 @@ bool get isMobilePlatform =>
 class AppSettings {
   const AppSettings({
     this.themeMode = ThemeMode.system,
+    this.language = AppLanguage.system,
     this.refreshMinutes = 5,
     this.notificationsEnabled = true,
     this.thresholds = const [20, 5],
@@ -65,6 +72,7 @@ class AppSettings {
   );
 
   final ThemeMode themeMode;
+  final AppLanguage language;
   final int refreshMinutes;
   final bool notificationsEnabled;
 
@@ -88,6 +96,7 @@ class AppSettings {
 
   AppSettings copyWith({
     ThemeMode? themeMode,
+    AppLanguage? language,
     int? refreshMinutes,
     bool? notificationsEnabled,
     List<int>? thresholds,
@@ -104,6 +113,7 @@ class AppSettings {
     String? skippedVersion,
   }) => AppSettings(
     themeMode: themeMode ?? this.themeMode,
+    language: language ?? this.language,
     refreshMinutes: refreshMinutes ?? this.refreshMinutes,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     thresholds: thresholds ?? this.thresholds,
@@ -123,6 +133,7 @@ class AppSettings {
   /// Non-secret fields (the server token lives in secure storage).
   Map<String, Object?> toJson() => {
     'themeMode': themeMode.name,
+    'language': language.name,
     'refreshMinutes': refreshMinutes,
     'notificationsEnabled': notificationsEnabled,
     'thresholds': thresholds,
@@ -145,6 +156,11 @@ class AppSettings {
       themeMode: ThemeMode.values.firstWhere(
         (m) => m.name == json['themeMode'],
         orElse: () => d.themeMode,
+      ),
+      // Unknown or missing values (older files, future languages) fall back to "system".
+      language: AppLanguage.values.firstWhere(
+        (l) => l.name == json['language'],
+        orElse: () => d.language,
       ),
       refreshMinutes: pick<int>('refreshMinutes', d.refreshMinutes),
       notificationsEnabled: pick<bool>('notificationsEnabled', d.notificationsEnabled),

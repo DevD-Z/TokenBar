@@ -7,12 +7,15 @@ import 'package:provider/provider.dart';
 import 'app/app_shell.dart';
 import 'app/theme.dart';
 import 'demo/demo_data.dart';
+import 'l10n/app_locale.dart';
+import 'l10n/app_localizations.dart';
 import 'services/desktop.dart';
 import 'services/history_store.dart';
 import 'services/home_widget_bridge.dart';
 import 'services/notifier.dart';
 import 'services/persistence.dart';
 import 'state/app_controller.dart';
+import 'state/settings.dart';
 import 'state/update_controller.dart';
 import 'ui/tray_panel.dart';
 
@@ -25,6 +28,11 @@ Future<void> main(List<String> args) async {
   final desktop = DesktopIntegration();
   final notifier = Notifier();
   final homeWidget = HomeWidgetBridge();
+  // Used for the tray menu and the first notification setup; later changes
+  // reach the services through the controller.
+  final l10n = lookupAppLocalizations(
+    resolveAppLocale(settings.language, WidgetsBinding.instance.platformDispatcher.locales),
+  );
 
   final controller = AppController(
     persistence: persistence,
@@ -36,8 +44,12 @@ Future<void> main(List<String> args) async {
     homeWidget: homeWidget,
   );
 
-  await desktop.init(onRefresh: controller.refresh, minimizeToTray: settings.minimizeToTray);
-  await notifier.init();
+  await desktop.init(
+    onRefresh: controller.refresh,
+    minimizeToTray: settings.minimizeToTray,
+    l10n: l10n,
+  );
+  await notifier.init(l10n);
   await homeWidget.init();
   if (demoData == null) {
     await controller.init();
@@ -66,11 +78,33 @@ Future<void> main(List<String> args) async {
   }
 }
 
-class TokenBarApp extends StatelessWidget {
+class TokenBarApp extends StatefulWidget {
   const TokenBarApp({super.key});
 
   @override
+  State<TokenBarApp> createState() => _TokenBarAppState();
+}
+
+class _TokenBarAppState extends State<TokenBarApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    // With the "System" language, the UI follows the device language live.
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) => setState(() {});
+
+  @override
   Widget build(BuildContext context) {
+    final language = context.select<AppController, AppLanguage>((c) => c.settings.language);
     final themeMode = context.select<AppController, ThemeMode>((c) => c.settings.themeMode);
     final desktop = context.read<AppController>().desktop;
     return MaterialApp(
@@ -79,11 +113,11 @@ class TokenBarApp extends StatelessWidget {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
-      // The UI is Chinese. Setting the locale also makes the engine pick Chinese
-      // glyph variants (instead of Japanese ones) when it falls back for Han text.
-      locale: const Locale('zh', 'CN'),
-      supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      // Always set (also for English): the locale makes the engine pick the
+      // right glyph variants for Han text, and AppTheme adds the CJK fallback.
+      locale: resolveAppLocale(language, WidgetsBinding.instance.platformDispatcher.locales),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: [AppLocalizations.delegate, ...GlobalMaterialLocalizations.delegates],
       // The same window doubles as the tray panel; the navigator (and its state)
       // stays alive underneath while the panel is up.
       builder: (context, child) => ValueListenableBuilder<bool>(

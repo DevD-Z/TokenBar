@@ -3,11 +3,14 @@ import '../../models/rate_window.dart';
 import '../../util/json_utils.dart';
 
 class CursorUsage {
-  const CursorUsage({required this.windows, required this.credits, this.plan});
+  const CursorUsage({required this.windows, required this.credits, this.plan, this.cycleStart});
 
   final List<RateWindow> windows;
   final List<Credits> credits;
   final String? plan;
+
+  /// Start of the current billing cycle (`billingCycleStart`), used to bound the events query.
+  final DateTime? cycleStart;
 }
 
 /// Parses `GET https://cursor.com/api/usage-summary`.
@@ -106,7 +109,12 @@ CursorUsage parseCursorUsageSummary(Map<String, Object?> json) {
       const Credits(id: 'cursor-plan', label: 'Plan usage', unlimited: true),
   ];
 
-  return CursorUsage(windows: windows, credits: credits, plan: asString(json['membershipType']));
+  return CursorUsage(
+    windows: windows,
+    credits: credits,
+    plan: asString(json['membershipType']),
+    cycleStart: start,
+  );
 }
 
 /// `sub` looks like `auth0|user_01ABC`; the cookie wants the last segment.

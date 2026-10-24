@@ -33,6 +33,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Provider logos
+
+The SVG logos in `assets/provider_icons/` are copied from CodexBar's
+`Sources/CodexBar/Resources/` (MIT, see above). Each logo is the trademark of
+its owner and is used only to identify that service. See
+[assets/provider_icons/README.md](assets/provider_icons/README.md) for the
+file mapping.
+
 ## Dependencies
 
 Flutter, Dart and the packages listed in `pubspec.yaml` are used under their

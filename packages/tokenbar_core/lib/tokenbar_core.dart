@@ -20,6 +20,14 @@ export 'src/providers/codex/codex_provider.dart';
 export 'src/providers/codex/codex_usage_parser.dart';
 export 'src/providers/cursor/cursor_provider.dart';
 export 'src/providers/cursor/cursor_session.dart' show CursorSession, cursorStateDbPath;
+export 'src/providers/cursor/cursor_usage_events.dart'
+    show
+        CursorModelUsage,
+        CursorUsageEvent,
+        cursorModelExtras,
+        parseCursorUsageEventsPage,
+        reconcileCursorEventPages,
+        summarizeCursorModelUsage;
 export 'src/providers/cursor/cursor_usage_parser.dart';
 export 'src/providers/common.dart' show isPrivateHost, gatewayBaseUrl, moneyText;
 export 'src/providers/fields.dart';

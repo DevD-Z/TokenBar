@@ -32,6 +32,8 @@ dependencies:
   screen_retriever: ^0.2.2
   package_info_plus: ^9.0.1
   url_launcher: ^6.3.3
+  intl: ^0.20.3
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
@@ -40,5 +42,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/icon/tokenbar.png
+    - assets/provider_icons/

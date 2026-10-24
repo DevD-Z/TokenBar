@@ -1,0 +1,353 @@
+{
+  "@@locale": "zh",
+
+  "navQuota": "额度",
+  "navAccounts": "账户",
+  "navSettings": "设置",
+  "refresh": "刷新",
+  "refreshNow": "立即刷新",
+  "openTokenBar": "打开 TokenBar",
+  "quit": "退出",
+  "cancel": "取消",
+  "delete": "删除",
+  "edit": "编辑",
+  "save": "保存",
+  "later": "稍后",
+  "addAccount": "添加账户",
+  "systemDefault": "跟随系统",
+  "languageZh": "简体中文",
+  "languageEn": "English",
+
+  "justNow": "刚刚",
+  "minutesAgo": "{count} 分钟前",
+  "@minutesAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "hoursAgo": "{count} 小时前",
+  "@hoursAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "daysAgo": "{count} 天前",
+  "@daysAgo": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "resetImminent": "即将重置",
+  "lessThanMinute": "不到 1 分钟",
+  "countdownDaysHours": "{days}天{hours}小时",
+  "@countdownDaysHours": {
+    "placeholders": { "days": { "type": "int" }, "hours": { "type": "int" } }
+  },
+  "countdownDays": "{days}天",
+  "@countdownDays": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "countdownHoursMinutes": "{hours}小时{minutes}分",
+  "@countdownHoursMinutes": {
+    "placeholders": { "hours": { "type": "int" }, "minutes": { "type": "int" } }
+  },
+  "countdownHours": "{hours}小时",
+  "@countdownHours": {
+    "placeholders": { "hours": { "type": "int" } }
+  },
+  "countdownMinutes": "{minutes}分钟",
+  "@countdownMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "resetsIn": "{countdown}后重置",
+  "@resetsIn": {
+    "placeholders": { "countdown": { "type": "String" } }
+  },
+  "resetTomorrow": "明天 {time}",
+  "@resetTomorrow": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "resetWeekday": "{weekday} {time}",
+  "@resetWeekday": {
+    "placeholders": { "weekday": { "type": "String" }, "time": { "type": "String" } }
+  },
+  "resetDate": "{date} {time}",
+  "@resetDate": {
+    "placeholders": { "date": { "type": "String" }, "time": { "type": "String" } }
+  },
+  "monthDay": "{month}月{day}日",
+  "@monthDay": {
+    "placeholders": { "month": { "type": "int" }, "day": { "type": "int" } }
+  },
+  "weekdayMon": "周一",
+  "weekdayTue": "周二",
+  "weekdayWed": "周三",
+  "weekdayThu": "周四",
+  "weekdayFri": "周五",
+  "weekdaySat": "周六",
+  "weekdaySun": "周日",
+  "timeWithAgo": "{time}（{ago}）",
+  "@timeWithAgo": {
+    "placeholders": { "time": { "type": "String" }, "ago": { "type": "String" } }
+  },
+  "updatedAgo": "更新于 {time}",
+  "@updatedAgo": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "listSeparator": "、",
+  "sentenceJoin": "。",
+
+  "labelWeekly": "每周",
+  "labelMonthly": "每月",
+  "labelDaily": "每日",
+  "labelFiveHour": "5 小时",
+  "labelThisMonth": "本月",
+  "labelToday": "今日",
+  "labelQuota": "额度",
+  "labelHours": "{count} 小时",
+  "@labelHours": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "labelDays": "{count} 天",
+  "@labelDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "cursorMonthlyQuota": "本月额度",
+  "cursorApiModels": "API 模型",
+  "windowOpusWeekly": "Opus 每周",
+  "windowSonnetWeekly": "Sonnet 每周",
+  "unlimited": "无限",
+  "creditsBalance": "Credits 余额",
+  "creditsSpendLimit": "月度 Credits 上限",
+  "extraUsage": "额外用量",
+  "cursorPlanUsage": "本月用量",
+  "cursorOnDemand": "按需用量",
+  "cursorTeamOnDemand": "团队按需用量",
+  "sourceCursorLocal": "Cursor 本机登录",
+  "sourceServer": "服务器",
+  "localLogin": "本机登录",
+  "remainingSuffix": "剩余",
+  "usedPercent": "已用 {value}",
+  "@usedPercent": {
+    "placeholders": { "value": { "type": "String" } }
+  },
+  "paceAhead": "快于节奏 {percent}%",
+  "@paceAhead": {
+    "placeholders": { "percent": { "type": "int" } }
+  },
+  "paceBehind": "低于节奏 {percent}%",
+  "@paceBehind": {
+    "placeholders": { "percent": { "type": "int" } }
+  },
+  "paceTooltip": "线性消耗下应剩余 {percent}%",
+  "@paceTooltip": {
+    "placeholders": { "percent": { "type": "int" } }
+  },
+  "noData": "无数据",
+  "staleDataNotice": "显示的是上次数据：{error}",
+  "@staleDataNotice": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "fromDevice": "来自 {origin}",
+  "@fromDevice": {
+    "placeholders": { "origin": { "type": "String" } }
+  },
+  "syncNeedsServerConfig": "请先在设置中配置服务器地址和令牌",
+  "syncFailed": "同步失败：{error}",
+  "@syncFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "unsupportedProvider": "不支持的服务：{providerId}",
+  "@unsupportedProvider": {
+    "placeholders": { "providerId": { "type": "String" } }
+  },
+  "serverTokenInvalid": "已连接，但令牌无效",
+
+  "syncModeOff": "不使用",
+  "syncModeServerView": "查看服务器数据",
+  "syncModePush": "推送本机数据",
+
+  "quotaLoading": "正在读取额度…",
+  "noAccountsYetPanel": "还没有账户\n打开 TokenBar 添加服务",
+  "noQuotaDataYet": "还没有额度数据",
+  "webEmptyMessage": "还没有设备推送数据。\n在电脑上的 TokenBar 开启“推送本机数据”，或运行 tokenbar collect。",
+  "desktopEmptyMessage": "添加 Codex、Claude 或 Cursor 账户。\nTokenBar 会直接读取本机登录状态，向官方查询额度。",
+  "mobileEmptyMessage": "添加 Cursor 账户（粘贴 cursor.com Cookie）即可直接查看额度。\nCodex / Claude 的登录在电脑上，可选用服务器同步到手机。",
+  "serverSettings": "服务器设置",
+
+  "settingsAppearance": "外观",
+  "settingsTheme": "主题",
+  "themeLight": "浅色",
+  "themeDark": "深色",
+  "settingsLanguage": "语言",
+  "sectionRefresh": "刷新",
+  "autoRefreshInterval": "自动刷新间隔",
+  "autoRefreshIntervalHint": "连续失败时会自动退避，最长 30 分钟",
+  "refreshMinutes": "{minutes} 分钟",
+  "@refreshMinutes": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
+  "sectionNotifications": "通知",
+  "lowQuotaAlerts": "低额度提醒",
+  "alertThresholds": "提醒阈值（剩余）",
+  "resetAlerts": "额度重置提醒",
+  "resetAlertsHint": "额度较低时重置后通知",
+  "sectionSyncOptional": "服务器同步（可选）",
+  "sectionServer": "服务器",
+  "syncEnabled": "已启用：{mode}",
+  "@syncEnabled": {
+    "placeholders": { "mode": { "type": "String" } }
+  },
+  "syncDisabled": "未启用",
+  "syncOptionalHint": "不需要服务器也能使用。只有想在手机或网页上查看电脑上的额度时，才需要自建 TokenBar 服务器。",
+  "syncDescLocal": "所有账户都由本机直接向官方查询，不需要服务器。",
+  "syncDescServerWeb": "显示各设备推送到本服务器的额度数据。",
+  "syncDescServerDesktop": "在本机账户之外，再显示其他设备推送到自建服务器的账户（例如电脑上的 Codex / Claude）。",
+  "syncDescPush": "把本机查询结果推送到自建服务器，供手机和网页查看；同时显示服务器上其他设备的账户。",
+  "serverUrl": "服务器地址",
+  "accessToken": "访问令牌",
+  "tokenHelperPush": "推送需要管理员令牌 (TOKENBAR_TOKEN)",
+  "tokenHelperRead": "只读令牌或管理员令牌",
+  "deviceName": "设备名称",
+  "deviceNameHint": "例如：办公室电脑",
+  "savedSyncSettings": "已保存同步设置",
+  "testConnection": "测试连接",
+  "connectionOk": "连接成功",
+  "connectionFailed": "连接失败：{error}",
+  "@connectionFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "sectionDataSources": "数据源",
+  "allowCliFallback": "允许调用 Codex CLI 兜底",
+  "allowCliFallbackHint": "OAuth 令牌过期时通过 `codex app-server` 读取额度（由 CLI 负责刷新登录）",
+  "allowClaudeRefresh": "允许 TokenBar 刷新 Claude 令牌",
+  "allowClaudeRefreshHint": "令牌过期时由 TokenBar 刷新并写回 ~/.claude/.credentials.json。刷新会轮换 refresh token，若 Claude Code 正在运行可能需要重新登录。默认关闭。",
+  "sectionDesktop": "桌面",
+  "launchAtStartup": "开机自动启动",
+  "minimizeToTray": "关闭窗口时最小化到托盘",
+  "sectionAbout": "关于",
+  "updateChecking": "正在检查…",
+  "upToDate": "已是最新版本",
+  "newVersionAvailable": "发现新版本 {tag}",
+  "@newVersionAvailable": {
+    "placeholders": { "tag": { "type": "String" } }
+  },
+  "checkFailedRateLimit": "检查失败：请求过于频繁，请稍后再试",
+  "checkFailedNetwork": "检查失败：无法连接 GitHub",
+  "checkFailedFormat": "检查失败：GitHub 返回了无法识别的数据",
+  "viewUpdate": "查看更新",
+  "checkForUpdates": "检查更新",
+  "autoCheckUpdates": "启动时自动检查更新",
+  "autoCheckUpdatesHint": "仅向 GitHub 请求最新版本号，不发送任何账号或使用数据",
+  "projectHome": "项目主页",
+  "aboutBlurb": "开源跨平台 AI 额度监控（MIT）。数据获取方式参考 steipete/CodexBar。直接向各服务商官方接口查询，复用本机客户端的登录状态（只读），不收集账号密码；可选的自建服务器只保存额度快照，不保存令牌。",
+
+  "updateNoNotes": "此版本未提供更新说明。",
+  "currentVersion": "当前版本 {version}",
+  "@currentVersion": {
+    "placeholders": { "version": { "type": "String" } }
+  },
+  "skipThisVersion": "忽略此版本",
+  "goToDownload": "前往下载",
+
+  "usageNote": "用量为各额度窗口在该时段内新增的已用百分比；不同窗口可能统计同一批请求，可用上方标签选择要叠加的项。",
+  "historyNotEnough": "历史数据不足，自动刷新后会逐渐积累",
+  "metricUsage": "额度用量",
+  "metricCost": "费用",
+  "selectAtLeastOne": "请至少选择一项",
+  "noUsageChanges": "这段时间内没有用量变化",
+  "noCostChanges": "这段时间内没有费用变化",
+  "rangeDay": "24 小时",
+  "rangeWeek": "7 天",
+  "rangeMonth": "30 天",
+  "accountNotFound": "账户不存在",
+  "allQuotas": "全部额度",
+  "usageHistory": "使用历史",
+  "historyLoadFailed": "加载历史失败：{error}",
+  "@historyLoadFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "infoService": "服务",
+  "infoPlan": "套餐",
+  "infoAccount": "账户",
+  "infoSource": "数据来源",
+  "infoDevice": "采集设备",
+  "infoUpdatedAt": "更新时间",
+  "infoLastError": "最近错误",
+  "projectionRunsOut": "按当前速度约 {countdown}后用完（早于重置）",
+  "@projectionRunsOut": {
+    "placeholders": { "countdown": { "type": "String" } }
+  },
+  "exhaustedWaitingReset": "已用完，等待重置",
+  "projectedAtReset": "按当前速度，重置时预计用掉 {percent}",
+  "@projectedAtReset": {
+    "placeholders": { "percent": { "type": "String" } }
+  },
+
+  "myAccounts": "我的账户",
+  "dragToReorder": "拖动排序",
+  "detectLocalLogins": "检测本机已登录的服务",
+  "noNewLocalLogins": "没有发现新的本机登录",
+  "addedAccounts": "已添加：{names}",
+  "@addedAccounts": {
+    "placeholders": { "names": { "type": "String" } }
+  },
+  "noAccountsList": "还没有账户",
+  "serverAccounts": "服务器上的账户",
+  "serverNotConfigured": "未配置服务器",
+  "noRemoteAccounts": "服务器上暂无其他设备推送的账户。",
+  "mobileAccountsHint": "填写 API Key 或粘贴 Cookie 的服务可以直接在手机上查询。Codex / Claude 等只在电脑上登录的服务，想在手机上看，可在设置里开启可选的服务器同步。",
+  "defaultLogin": "默认登录",
+  "defaultLoginAt": "默认登录（{home}）",
+  "@defaultLoginAt": {
+    "placeholders": { "home": { "type": "String" } }
+  },
+  "deleteAccountTitle": "删除账户",
+  "deleteAccountBody": "确定删除“{label}”？本地历史记录也会被删除，CLI 登录不受影响。",
+  "@deleteAccountBody": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "chooseService": "选择服务",
+  "search": "搜索",
+  "serviceField": "服务",
+  "displayName": "显示名称",
+  "editAccount": "编辑账户",
+  "fillField": "请填写 {label}",
+  "@fillField": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "optionalField": "{label}（可选）",
+  "@optionalField": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "cursorDataDirField": "Cursor 数据目录（可选）",
+  "configDirField": "配置目录（可选）",
+  "homeDirHelper": "留空使用默认目录；多账户时为每个账户指定不同目录",
+  "envDetected": "已检测到环境变量 {names}，可留空",
+  "@envDetected": {
+    "placeholders": { "names": { "type": "String" } }
+  },
+  "storedInKeychain": "保存在系统安全存储中",
+  "savedKeepUnchanged": "已保存，留空保持不变",
+
+  "quotaResetTitle": "{name} · {window}额度已重置",
+  "@quotaResetTitle": {
+    "placeholders": { "name": { "type": "String" }, "window": { "type": "String" } }
+  },
+  "quotaResetBody": "当前剩余 {remaining}",
+  "@quotaResetBody": {
+    "placeholders": { "remaining": { "type": "String" } }
+  },
+  "lowQuotaTitle": "{name} · {window}额度不足",
+  "@lowQuotaTitle": {
+    "placeholders": { "name": { "type": "String" }, "window": { "type": "String" } }
+  },
+  "lowQuotaBody": "剩余 {remaining}",
+  "@lowQuotaBody": {
+    "placeholders": { "remaining": { "type": "String" } }
+  },
+  "lowQuotaBodyWithReset": "剩余 {remaining}，{countdown}后重置",
+  "@lowQuotaBodyWithReset": {
+    "placeholders": { "remaining": { "type": "String" }, "countdown": { "type": "String" } }
+  },
+  "notificationChannelName": "额度提醒",
+  "notificationChannelDescription": "低额度和额度重置提醒",
+  "widgetUpdatedAt": "{time} 更新",
+  "@widgetUpdatedAt": {
+    "placeholders": { "time": { "type": "String" } }
+  }
+}

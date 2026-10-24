@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
 import '../../app/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../format.dart';
 import 'usage_bar.dart';
 
@@ -15,6 +16,7 @@ class WindowRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     final reset = window.timeUntilReset(now);
@@ -22,9 +24,9 @@ class WindowRow extends StatelessWidget {
     final pace = window.paceDelta(now);
     final remaining = window.remainingPercent;
 
-    final details = <String>['已用 ${formatPercent(window.usedClamped)}'];
+    final details = <String>[l.usedPercent(formatPercent(window.usedClamped))];
     if (reset != null) {
-      details.add('${countdownZh(reset)}后重置 · ${resetTimeZh(window.resetsAt!, now)}');
+      details.add('${resetsInLabel(l, reset)} · ${resetTimeLabel(l, window.resetsAt!, now)}');
     }
 
     return Column(
@@ -36,7 +38,7 @@ class WindowRow extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                windowLabel(window),
+                windowLabel(l, window),
                 style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -50,7 +52,7 @@ class WindowRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Text('剩余', style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+            Text(l.remainingSuffix, style: theme.textTheme.bodySmall?.copyWith(color: muted)),
           ],
         ),
         const SizedBox(height: 4),
@@ -67,7 +69,7 @@ class WindowRow extends StatelessWidget {
             ),
             if (pace != null && pace.abs() >= 5)
               Text(
-                pace > 0 ? '快于节奏 ${pace.round()}%' : '低于节奏 ${(-pace).round()}%',
+                pace > 0 ? l.paceAhead(pace.round()) : l.paceBehind((-pace).round()),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: pace > 0 ? quotaColor(15, theme.brightness) : muted,
                 ),

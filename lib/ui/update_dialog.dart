@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/app_localizations.dart';
 import '../services/update/update_service.dart';
 import '../state/update_controller.dart';
 
@@ -19,10 +20,11 @@ Future<void> showUpdateDialog(BuildContext context, UpdateController updates, Re
   return showDialog<void>(
     context: context,
     builder: (ctx) {
+      final l = AppLocalizations.of(ctx);
       final theme = Theme.of(ctx);
-      final notes = release.notes.isEmpty ? '此版本未提供更新说明。' : release.notes;
+      final notes = release.notes.isEmpty ? l.updateNoNotes : release.notes;
       return AlertDialog(
-        title: Text('发现新版本 ${release.tag}'),
+        title: Text(l.newVersionAvailable(release.tag)),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460, maxHeight: 320),
           child: Column(
@@ -30,7 +32,7 @@ Future<void> showUpdateDialog(BuildContext context, UpdateController updates, Re
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '当前版本 ${updates.currentVersion}',
+                l.currentVersion(updates.currentVersion),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -46,15 +48,15 @@ Future<void> showUpdateDialog(BuildContext context, UpdateController updates, Re
               updates.skip(release);
               Navigator.pop(ctx);
             },
-            child: const Text('忽略此版本'),
+            child: Text(l.skipThisVersion),
           ),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('稍后')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l.later)),
           FilledButton(
             onPressed: () {
               openReleasePage(release.pageUrl);
               Navigator.pop(ctx);
             },
-            child: const Text('前往下载'),
+            child: Text(l.goToDownload),
           ),
         ],
       );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/app_controller.dart';
 import '../format.dart';
 import '../widgets/history_chart.dart';
@@ -19,14 +20,21 @@ class AccountDetailPage extends StatefulWidget {
 }
 
 class _AccountDetailPageState extends State<AccountDetailPage> {
+  /// Range id → window length. Labels come from [_rangeLabel].
   static const _ranges = {
-    '24 小时': Duration(hours: 24),
-    '7 天': Duration(days: 7),
-    '30 天': Duration(days: 30),
+    'day': Duration(hours: 24),
+    'week': Duration(days: 7),
+    'month': Duration(days: 30),
   };
-  String _range = '7 天';
+  String _range = 'week';
   Future<List<UsagePoint>>? _history;
   DateTime? _loadedFor;
+
+  static String _rangeLabel(AppLocalizations l, String id) => switch (id) {
+    'day' => l.rangeDay,
+    'month' => l.rangeMonth,
+    _ => l.rangeWeek,
+  };
 
   void _load(AppController c) {
     _loadedFor = c.lastRefresh;
@@ -35,6 +43,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final c = context.watch<AppController>();
     if (_history == null || _loadedFor != c.lastRefresh) _load(c);
     final s =
@@ -45,7 +54,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     if (s == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const Center(child: Text('账户不存在')),
+        body: Center(child: Text(l.accountNotFound)),
       );
     }
     final provider = ProviderRegistry.instance.byId(s.providerId);
@@ -68,7 +77,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
           IconButton(
             onPressed: c.refreshing ? null : c.refresh,
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: l.refresh,
           ),
           const SizedBox(width: 8),
         ],
@@ -96,10 +105,10 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                               for (final w in s.windows.take(4))
                                 QuotaRing(
                                   remaining: w.remainingPercent,
-                                  label: windowLabel(w),
+                                  label: windowLabel(l, w),
                                   caption: w.resetsAt == null
                                       ? null
-                                      : '${countdownZh(w.timeUntilReset(now)!)}后重置',
+                                      : resetsInLabel(l, w.timeUntilReset(now)!),
                                 ),
                             ],
                           ),
@@ -113,7 +122,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('全部额度', style: theme.textTheme.titleMedium),
+                              Text(l.allQuotas, style: theme.textTheme.titleMedium),
                               const SizedBox(height: 12),
                               for (final w in s.windows) ...[
                                 WindowRow(window: w, now: now),
@@ -133,11 +142,13 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                           children: [
                             Row(
                               children: [
-                                Expanded(child: Text('使用历史', style: theme.textTheme.titleMedium)),
+                                Expanded(
+                                  child: Text(l.usageHistory, style: theme.textTheme.titleMedium),
+                                ),
                                 SegmentedButton<String>(
                                   segments: [
                                     for (final r in _ranges.keys)
-                                      ButtonSegment(value: r, label: Text(r)),
+                                      ButtonSegment(value: r, label: Text(_rangeLabel(l, r))),
                                   ],
                                   selected: {_range},
                                   showSelectedIcon: false,
@@ -162,13 +173,17 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                 if (snap.hasError) {
                                   return SizedBox(
                                     height: 120,
-                                    child: Center(child: Text('加载历史失败：${snap.error}')),
+                                    child: Center(
+                                      child: Text(l.historyLoadFailed('${snap.error}')),
+                                    ),
                                   );
                                 }
                                 return HistoryChart(
                                   points: snap.data ?? const [],
                                   range: _ranges[_range]!,
-                                  windowLabels: {for (final w in s.windows) w.id: windowLabel(w)},
+                                  windowLabels: {
+                                    for (final w in s.windows) w.id: windowLabel(l, w),
+                                  },
                                   credits: {for (final c in s.credits) c.id: c},
                                 );
                               },
@@ -181,23 +196,27 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                     Card(
                       child: Column(
                         children: [
-                          _info(context, '服务', provider?.displayName ?? s.providerId),
-                          if (s.plan != null) _info(context, '套餐', planLabel(s.plan)),
-                          if (s.email != null) _info(context, '账户', s.email!),
-                          if (s.source != null) _info(context, '数据来源', sourceLabel(s.source)),
-                          if (s.origin != null) _info(context, '采集设备', s.origin!),
+                          _info(context, l.infoService, provider?.displayName ?? s.providerId),
+                          if (s.plan != null) _info(context, l.infoPlan, planLabel(s.plan)),
+                          if (s.email != null) _info(context, l.infoAccount, s.email!),
+                          if (s.source != null)
+                            _info(context, l.infoSource, sourceLabel(l, s.source)),
+                          if (s.origin != null) _info(context, l.infoDevice, s.origin!),
                           _info(
                             context,
-                            '更新时间',
-                            '${resetTimeZh(s.fetchedAt, now)}（${agoZh(s.fetchedAt, now)}）',
+                            l.infoUpdatedAt,
+                            l.timeWithAgo(
+                              resetTimeLabel(l, s.fetchedAt, now),
+                              agoLabel(l, s.fetchedAt, now),
+                            ),
                           ),
                           for (final c in s.credits)
-                            _info(context, creditsLabel(c), creditsValue(c)),
+                            _info(context, creditsLabel(l, c), creditsValue(l, c)),
                           for (final e in s.extras.entries) _info(context, e.key, e.value),
                           if (s.error != null)
                             _info(
                               context,
-                              '最近错误',
+                              l.infoLastError,
                               [s.error, s.errorHint].whereType<String>().join('\n'),
                             ),
                         ],
@@ -239,6 +258,7 @@ class _Projection extends StatelessWidget {
     final projected = window.projectedUsedAtReset(now);
     final elapsed = window.elapsedFraction(now);
     if (projected == null || elapsed == null) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     String text;
     if (projected >= 100 && window.usedClamped < 100) {
@@ -247,11 +267,11 @@ class _Projection extends StatelessWidget {
       final elapsedTime = total * elapsed;
       final rate = window.usedClamped / elapsedTime.inSeconds;
       final secondsLeft = ((100 - window.usedClamped) / rate).round();
-      text = '按当前速度约 ${countdownZh(Duration(seconds: secondsLeft))}后用完（早于重置）';
+      text = l.projectionRunsOut(countdownLabel(l, Duration(seconds: secondsLeft)));
     } else if (window.usedClamped >= 100) {
-      text = '已用完，等待重置';
+      text = l.exhaustedWaitingReset;
     } else {
-      text = '按当前速度，重置时预计用掉 ${formatPercent(projected)}';
+      text = l.projectedAtReset(formatPercent(projected));
     }
     return Padding(
       padding: const EdgeInsets.only(top: 2),

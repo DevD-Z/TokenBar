@@ -1,5 +1,6 @@
 import 'package:tokenbar_core/tokenbar_core.dart';
 
+import '../l10n/app_localizations.dart';
 import '../ui/format.dart';
 
 class QuotaAlert {
@@ -25,6 +26,7 @@ class QuotaAlertEngine {
     required List<int> thresholds,
     required bool notifyOnReset,
     required String providerName,
+    required AppLocalizations l10n,
   }) {
     if (s.hasError) return const [];
     final alerts = <QuotaAlert>[];
@@ -51,8 +53,8 @@ class QuotaAlertEngine {
           alerts.add(
             QuotaAlert(
               '$key|reset',
-              '$name · ${windowLabel(w)}额度已重置',
-              '当前剩余 ${formatPercent(w.remainingPercent)}',
+              l10n.quotaResetTitle(name, windowLabel(l10n, w)),
+              l10n.quotaResetBody(formatPercent(w.remainingPercent)),
             ),
           );
         }
@@ -68,16 +70,12 @@ class QuotaAlertEngine {
         }
       }
       if (level != null && (notified == null || level < notified)) {
-        final resetText = w.resetsAt == null
-            ? ''
-            : '，${countdownZh(w.resetsAt!.difference(DateTime.now()))}后重置';
-        alerts.add(
-          QuotaAlert(
-            '$key|$level',
-            '$name · ${windowLabel(w)}额度不足',
-            '剩余 ${formatPercent(w.remainingPercent)}$resetText',
-          ),
-        );
+        final remaining = formatPercent(w.remainingPercent);
+        final until = w.resetsAt?.difference(DateTime.now());
+        final body = until == null || until.inSeconds <= 0
+            ? l10n.lowQuotaBody(remaining)
+            : l10n.lowQuotaBodyWithReset(remaining, countdownLabel(l10n, until));
+        alerts.add(QuotaAlert('$key|$level', l10n.lowQuotaTitle(name, windowLabel(l10n, w)), body));
         notified = level;
       } else if (level == null) {
         notified = null;

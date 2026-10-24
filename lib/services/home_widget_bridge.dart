@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/settings.dart';
 import '../ui/format.dart';
 
@@ -29,7 +30,7 @@ class HomeWidgetBridge {
     }
   }
 
-  Future<void> publish(List<UsageSnapshot> snapshots) async {
+  Future<void> publish(List<UsageSnapshot> snapshots, AppLocalizations l10n) async {
     if (!_ready) return;
     final now = DateTime.now();
     final rows = snapshots.where((s) => s.windows.isNotEmpty).take(maxRows).toList();
@@ -37,7 +38,7 @@ class HomeWidgetBridge {
       await HomeWidget.saveWidgetData<int>('tb_count', rows.length);
       await HomeWidget.saveWidgetData<String>(
         'tb_updated',
-        '${two(now.hour)}:${two(now.minute)} 更新',
+        l10n.widgetUpdatedAt('${two(now.hour)}:${two(now.minute)}'),
       );
       for (var i = 0; i < maxRows; i++) {
         final s = i < rows.length ? rows[i] : null;
@@ -58,7 +59,7 @@ class HomeWidgetBridge {
         );
         await HomeWidget.saveWidgetData<String>(
           'tb_${i}_detail',
-          s == null ? '' : (reset == null ? planLabel(s.plan) : '${countdownZh(reset)}后重置'),
+          s == null ? '' : (reset == null ? planLabel(s.plan) : resetsInLabel(l10n, reset)),
         );
       }
       await HomeWidget.updateWidget(androidName: androidName, iOSName: iOSName);

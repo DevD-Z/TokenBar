@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
 import '../../demo/demo_data.dart';
+import '../../l10n/app_localizations.dart';
 import '../../state/app_controller.dart';
 import '../../state/settings.dart';
 import '../format.dart';
@@ -15,25 +16,26 @@ class AccountsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final c = context.watch<AppController>();
     final theme = Theme.of(context);
     final local = c.settings.syncMode.fetchesLocally;
     final remote = c.snapshots.where((s) => !c.isLocalAccount(s.accountId)).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('账户')),
+      appBar: AppBar(title: Text(l.navAccounts)),
       floatingActionButton: local
           ? FloatingActionButton.extended(
               onPressed: () => showAccountEditor(context),
               icon: const Icon(Icons.add),
-              label: const Text('添加账户'),
+              label: Text(l.addAccount),
             )
           : null,
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
         children: [
           if (local) ...[
-            _SectionTitle('我的账户', trailing: c.accounts.length > 1 ? '拖动排序' : null),
+            _SectionTitle(l.myAccounts, trailing: c.accounts.length > 1 ? l.dragToReorder : null),
             if (canUseLocalLogins)
               Align(
                 alignment: Alignment.centerLeft,
@@ -44,19 +46,23 @@ class AccountsPage extends StatelessWidget {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(added.isEmpty ? '没有发现新的本机登录' : '已添加：${added.join('、')}'),
+                        content: Text(
+                          added.isEmpty
+                              ? l.noNewLocalLogins
+                              : l.addedAccounts(added.join(l.listSeparator)),
+                        ),
                       ),
                     );
                   },
                   icon: const Icon(Icons.search, size: 18),
-                  label: const Text('检测本机已登录的服务'),
+                  label: Text(l.detectLocalLogins),
                 ),
               ),
             if (c.accounts.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  '还没有账户',
+                  l.noAccountsList,
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -73,7 +79,7 @@ class AccountsPage extends StatelessWidget {
                       key: ValueKey(a.id),
                       leading: ProviderBadge(providerId: a.providerId),
                       title: Text(a.label),
-                      subtitle: Text(_describe(a), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(_describe(l, a), maxLines: 2, overflow: TextOverflow.ellipsis),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -88,9 +94,9 @@ class AccountsPage extends StatelessWidget {
                                 await c.removeAccount(a.id);
                               }
                             },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'edit', child: Text('编辑')),
-                              PopupMenuItem(value: 'delete', child: Text('删除')),
+                            itemBuilder: (_) => [
+                              PopupMenuItem(value: 'edit', child: Text(l.edit)),
+                              PopupMenuItem(value: 'delete', child: Text(l.delete)),
                             ],
                           ),
                           const SizedBox(width: 24),
@@ -103,12 +109,15 @@ class AccountsPage extends StatelessWidget {
           ],
           if (c.settings.syncMode.usesServer) ...[
             const SizedBox(height: 16),
-            _SectionTitle('服务器上的账户', trailing: c.settings.serverConfigured ? null : '未配置服务器'),
+            _SectionTitle(
+              l.serverAccounts,
+              trailing: c.settings.serverConfigured ? null : l.serverNotConfigured,
+            ),
             if (remote.isEmpty)
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  '服务器上暂无其他设备推送的账户。',
+                  l.noRemoteAccounts,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -125,8 +134,8 @@ class AccountsPage extends StatelessWidget {
                         subtitle: Text(
                           [
                             planLabel(s.plan),
-                            if (s.origin != null) '来自 ${s.origin}',
-                            '更新于 ${agoZh(s.fetchedAt, DateTime.now())}',
+                            if (s.origin != null) l.fromDevice(s.origin!),
+                            l.updatedAgo(agoLabel(l, s.fetchedAt, DateTime.now())),
                           ].where((e) => e.isNotEmpty).join(' · '),
                         ),
                       ),
@@ -138,8 +147,7 @@ class AccountsPage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                '填写 API Key 或粘贴 Cookie 的服务可以直接在手机上查询。Codex / Claude 等只在电脑上登录的服务，'
-                '想在手机上看，可在设置里开启可选的服务器同步。',
+                l.mobileAccountsHint,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -150,11 +158,11 @@ class AccountsPage extends StatelessWidget {
     );
   }
 
-  static String _describe(AccountConfig a) {
+  static String _describe(AppLocalizations l, AccountConfig a) {
     final provider = ProviderRegistry.instance.byId(a.providerId);
     final parts = <String>[provider?.displayName ?? a.providerId];
     if (a.sourceType == SourceType.apiKey) {
-      parts.add(sourceTypeLabel(a.providerId, a.sourceType));
+      parts.add(sourceTypeLabel(l, a.providerId, a.sourceType));
     } else {
       // Demo mode never shows real paths (they contain the OS user name).
       final home = kDemoMode
@@ -165,24 +173,28 @@ class AccountsPage extends StatelessWidget {
               'cursor' => cursorStateDbPath(a.homeDir),
               _ => a.homeDir,
             };
-      parts.add(a.homeDir == null ? '默认登录${home == null ? '' : '（$home）'}' : a.homeDir!);
+      parts.add(
+        a.homeDir == null ? (home == null ? l.defaultLogin : l.defaultLoginAt(home)) : a.homeDir!,
+      );
     }
     return parts.join(' · ');
   }
 
-  static Future<bool> _confirmDelete(BuildContext context, String label) async =>
-      await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('删除账户'),
-          content: Text('确定删除"$label"？本地历史记录也会被删除，CLI 登录不受影响。'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
-          ],
-        ),
-      ) ??
-      false;
+  static Future<bool> _confirmDelete(BuildContext context, String label) async {
+    final l = AppLocalizations.of(context);
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(l.deleteAccountTitle),
+            content: Text(l.deleteAccountBody(label)),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
+              FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l.delete)),
+            ],
+          ),
+        ) ??
+        false;
+  }
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -314,6 +326,7 @@ class _AccountEditorState extends State<_AccountEditor> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _save() async {
+    final l = AppLocalizations.of(context);
     final c = context.read<AppController>();
     final label = _label.text.trim().isEmpty ? _provider.displayName : _label.text.trim();
     final home = _home.text.trim();
@@ -336,7 +349,7 @@ class _AccountEditorState extends State<_AccountEditor> {
       for (final f in _provider.fields) {
         final present = f.isSecure ? secrets[f.key] != null : options[f.key] != null;
         if (f.required && !present && f.defaultValue == null && FieldValues.envValue(f) == null) {
-          _toast('请填写 ${f.label}');
+          _toast(l.fillField(f.label));
           return;
         }
       }
@@ -384,11 +397,12 @@ class _AccountEditorState extends State<_AccountEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final editing = widget.existing != null;
     final muted = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return AlertDialog(
-      title: Text(editing ? '编辑账户' : '添加账户'),
+      title: Text(editing ? l.editAccount : l.addAccount),
       content: SizedBox(
         width: 460,
         child: SingleChildScrollView(
@@ -406,7 +420,7 @@ class _AccountEditorState extends State<_AccountEditor> {
                         if (picked != null) _selectProvider(picked);
                       },
                 child: InputDecorator(
-                  decoration: InputDecoration(labelText: '服务', enabled: !editing),
+                  decoration: InputDecoration(labelText: l.serviceField, enabled: !editing),
                   child: Row(
                     children: [
                       ProviderBadge(providerId: _providerId, size: 22),
@@ -422,14 +436,14 @@ class _AccountEditorState extends State<_AccountEditor> {
               const SizedBox(height: 12),
               TextField(
                 controller: _label,
-                decoration: const InputDecoration(labelText: '显示名称'),
+                decoration: InputDecoration(labelText: l.displayName),
               ),
               if (_sources.length > 1) ...[
                 const SizedBox(height: 12),
                 SegmentedButton<SourceType>(
                   segments: [
                     for (final s in _sources)
-                      ButtonSegment(value: s, label: Text(sourceTypeLabel(_providerId, s))),
+                      ButtonSegment(value: s, label: Text(sourceTypeLabel(l, _providerId, s))),
                   ],
                   selected: {_source},
                   onSelectionChanged: (v) => setState(() => _source = v.first),
@@ -441,26 +455,29 @@ class _AccountEditorState extends State<_AccountEditor> {
                   TextField(
                     controller: _home,
                     decoration: InputDecoration(
-                      labelText: _providerId == 'cursor' ? 'Cursor 数据目录（可选）' : '配置目录（可选）',
+                      labelText: _providerId == 'cursor' ? l.cursorDataDirField : l.configDirField,
                       hintText: _defaultHome ?? '',
-                      helperText: '留空使用默认目录；多账户时为每个账户指定不同目录',
+                      helperText: l.homeDirHelper,
                       helperMaxLines: 2,
                     ),
                   ),
               ] else
-                for (final f in _provider.fields) ...[_buildField(f), const SizedBox(height: 12)],
+                for (final f in _provider.fields) ...[
+                  _buildField(l, f),
+                  const SizedBox(height: 12),
+                ],
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
-        FilledButton(onPressed: _save, child: const Text('保存')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
+        FilledButton(onPressed: _save, child: Text(l.save)),
       ],
     );
   }
 
-  Widget _buildField(ProviderField f) {
+  Widget _buildField(AppLocalizations l, ProviderField f) {
     if (f.kind == FieldKind.choice) {
       return DropdownButtonFormField<String>(
         initialValue: _choices[f.key],
@@ -473,9 +490,9 @@ class _AccountEditorState extends State<_AccountEditor> {
     final saved = f.isSecure && _savedSecrets[f.key] != null;
     final helper = [
       if (f.help != null) f.help!,
-      if (env != null) '已检测到环境变量 ${f.envVars.join(' / ')}，可留空',
-      if (f.isSecure) '保存在系统安全存储中',
-    ].join('。');
+      if (env != null) l.envDetected(f.envVars.join(' / ')),
+      if (f.isSecure) l.storedInKeychain,
+    ].join(l.sentenceJoin);
     return TextField(
       controller: _fields[f.key],
       obscureText: f.isSecure && !f.multiline,
@@ -484,8 +501,8 @@ class _AccountEditorState extends State<_AccountEditor> {
       style: f.multiline ? const TextStyle(fontFamily: 'monospace', fontSize: 12) : null,
       keyboardType: f.kind == FieldKind.url ? TextInputType.url : null,
       decoration: InputDecoration(
-        labelText: f.required ? f.label : '${f.label}（可选）',
-        hintText: saved ? '已保存，留空保持不变' : (f.hint ?? f.defaultValue),
+        labelText: f.required ? f.label : l.optionalField(f.label),
+        hintText: saved ? l.savedKeepUnchanged : (f.hint ?? f.defaultValue),
         helperText: helper.isEmpty ? null : helper,
         helperMaxLines: 4,
       ),
@@ -510,12 +527,13 @@ class _ProviderPickerState extends State<_ProviderPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final q = _query.trim().toLowerCase();
     final items = availableProviders
         .where((p) => q.isEmpty || p.displayName.toLowerCase().contains(q) || p.id.contains(q))
         .toList();
     return AlertDialog(
-      title: const Text('选择服务'),
+      title: Text(l.chooseService),
       contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       content: SizedBox(
         width: 420,
@@ -524,9 +542,9 @@ class _ProviderPickerState extends State<_ProviderPicker> {
           children: [
             TextField(
               autofocus: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: '搜索',
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: l.search,
                 isDense: true,
               ),
               onChanged: (v) => setState(() => _query = v),
@@ -541,7 +559,9 @@ class _ProviderPickerState extends State<_ProviderPicker> {
                     dense: true,
                     leading: ProviderBadge(providerId: p.id, size: 26),
                     title: Text(p.displayName),
-                    subtitle: Text(_sourcesOf(p).map((s) => sourceTypeLabel(p.id, s)).join(' / ')),
+                    subtitle: Text(
+                      _sourcesOf(p).map((s) => sourceTypeLabel(l, p.id, s)).join(' / '),
+                    ),
                     onTap: () => Navigator.pop(context, p),
                   );
                 },
@@ -550,7 +570,7 @@ class _ProviderPickerState extends State<_ProviderPicker> {
           ],
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel))],
     );
   }
 }

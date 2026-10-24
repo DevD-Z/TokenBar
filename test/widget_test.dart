@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:token_bar/app/theme.dart';
+import 'package:token_bar/l10n/app_localizations.dart';
 import 'package:token_bar/services/quota_alerts.dart';
 import 'package:token_bar/state/settings.dart';
 import 'package:token_bar/ui/format.dart';
@@ -9,8 +11,20 @@ import 'package:token_bar/ui/pages/accounts_page.dart';
 import 'package:token_bar/ui/widgets/account_card.dart';
 import 'package:tokenbar_core/tokenbar_core.dart';
 
+const _zh = Locale('zh', 'CN');
+
+/// Localized MaterialApp wrapper: the UI is Chinese by default in these tests.
+MaterialApp _app({required Widget home, ThemeData? theme}) => MaterialApp(
+  theme: theme,
+  locale: _zh,
+  supportedLocales: AppLocalizations.supportedLocales,
+  localizationsDelegates: [AppLocalizations.delegate, ...GlobalMaterialLocalizations.delegates],
+  home: home,
+);
+
 void main() {
   final now = DateTime(2026, 10, 23, 12);
+  final l = lookupAppLocalizations(_zh);
 
   UsageSnapshot snapshot({double session = 42, double weekly = 17, String? error}) => UsageSnapshot(
     accountId: 'a1',
@@ -42,7 +56,7 @@ void main() {
 
   testWidgets('account card shows remaining, countdown and plan', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      _app(
         theme: AppTheme.light(),
         home: Scaffold(
           body: SingleChildScrollView(
@@ -62,7 +76,7 @@ void main() {
 
   testWidgets('stale data is labelled when last fetch failed', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      _app(
         home: Scaffold(
           body: SingleChildScrollView(
             child: AccountCard(
@@ -76,6 +90,30 @@ void main() {
     expect(find.textContaining('显示的是上次数据'), findsOneWidget);
   });
 
+  testWidgets('account card renders in English', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en', 'US'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: AccountCard(snapshot: snapshot(), now: now),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('工作账户'), findsOneWidget);
+    expect(find.text('Credits balance'), findsOneWidget);
+    expect(find.textContaining('Resets in 2h 5m'), findsOneWidget);
+    expect(find.textContaining('Updated 3 minutes ago'), findsOneWidget);
+    expect(find.textContaining('Weekly'), findsWidgets);
+    expect(find.textContaining('5-hour'), findsWidgets);
+  });
+
   group('quota alerts', () {
     test('fires once per threshold per period', () {
       final engine = QuotaAlertEngine({});
@@ -84,6 +122,7 @@ void main() {
         thresholds: const [20, 5],
         notifyOnReset: true,
         providerName: 'Codex',
+        l10n: l,
       );
       expect(run(50), isEmpty);
       expect(run(85).single.title, contains('额度不足'));
@@ -96,7 +135,13 @@ void main() {
       final state = <String, Object?>{};
       final engine = QuotaAlertEngine(state);
       final low = snapshot(session: 90, weekly: 0);
-      engine.evaluate(low, thresholds: const [20], notifyOnReset: true, providerName: 'Codex');
+      engine.evaluate(
+        low,
+        thresholds: const [20],
+        notifyOnReset: true,
+        providerName: 'Codex',
+        l10n: l,
+      );
       final fresh = UsageSnapshot(
         accountId: 'a1',
         providerId: 'codex',
@@ -116,6 +161,7 @@ void main() {
         thresholds: const [20],
         notifyOnReset: true,
         providerName: 'Codex',
+        l10n: l,
       );
       expect(alerts.single.title, contains('已重置'));
     });
@@ -124,6 +170,7 @@ void main() {
   test('settings json roundtrip keeps token out of json', () {
     final s = AppSettings.defaults().copyWith(
       themeMode: ThemeMode.dark,
+      language: AppLanguage.en,
       refreshMinutes: 10,
       syncMode: SyncMode.localPush,
       serverUrl: 'https://tb.example.com',
@@ -134,6 +181,7 @@ void main() {
     expect(json.containsKey('serverToken'), isFalse);
     final back = AppSettings.fromJson(json, token: 'secret');
     expect(back.themeMode, ThemeMode.dark);
+    expect(back.language, AppLanguage.en);
     expect(back.syncMode, SyncMode.localPush);
     expect(back.thresholds, [30, 10]);
     expect(back.serverConfigured, isTrue);
@@ -144,7 +192,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-      MaterialApp(
+      _app(
         home: Builder(
           builder: (context) =>
               TextButton(onPressed: () => showAccountEditor(context), child: const Text('open')),
@@ -188,18 +236,18 @@ void main() {
 
   test('cursor labels', () {
     expect(
-      windowLabel(const RateWindow(id: 'cursor-total', label: 'Monthly', usedPercent: 5)),
+      windowLabel(l, const RateWindow(id: 'cursor-total', label: 'Monthly', usedPercent: 5)),
       '本月额度',
     );
-    expect(creditsLabel(const Credits(id: 'cursor-plan', label: 'Plan usage')), '本月用量');
-    expect(sourceTypeLabel('cursor', SourceType.apiKey), '手动粘贴 Cookie');
-    expect(sourceTypeLabel('codex', SourceType.localCli), '本机 Codex CLI 登录');
+    expect(creditsLabel(l, const Credits(id: 'cursor-plan', label: 'Plan usage')), '本月用量');
+    expect(sourceTypeLabel(l, 'cursor', SourceType.apiKey), '手动粘贴 Cookie');
+    expect(sourceTypeLabel(l, 'codex', SourceType.localCli), '本机 Codex CLI 登录');
   });
 
   test('chinese formatting', () {
-    expect(countdownZh(const Duration(days: 2, hours: 3)), '2天3小时');
-    expect(countdownZh(const Duration(minutes: 45)), '45分钟');
-    expect(resetTimeZh(DateTime(2026, 10, 23, 18, 5), now), '18:05');
-    expect(resetTimeZh(DateTime(2026, 10, 24, 9, 0), now), '明天 09:00');
+    expect(countdownLabel(l, const Duration(days: 2, hours: 3)), '2天3小时');
+    expect(countdownLabel(l, const Duration(minutes: 45)), '45分钟');
+    expect(resetTimeLabel(l, DateTime(2026, 10, 23, 18, 5), now), '18:05');
+    expect(resetTimeLabel(l, DateTime(2026, 10, 24, 9, 0), now), '明天 09:00');
   });
 }

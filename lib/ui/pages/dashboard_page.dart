@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/app_controller.dart';
 import '../../state/settings.dart';
 import '../format.dart';
@@ -16,13 +17,14 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final c = context.watch<AppController>();
     final snapshots = c.snapshots;
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('额度', style: Theme.of(context).textTheme.headlineSmall),
+        title: Text(l.navQuota, style: Theme.of(context).textTheme.headlineSmall),
         actions: [
           if (c.lastRefresh != null)
             Padding(
@@ -30,7 +32,7 @@ class DashboardPage extends StatelessWidget {
               child: ValueListenableBuilder(
                 valueListenable: c.now,
                 builder: (_, now, _) => Text(
-                  agoZh(c.lastRefresh!, now),
+                  agoLabel(l, c.lastRefresh!, now),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -38,7 +40,7 @@ class DashboardPage extends StatelessWidget {
               ),
             ),
           IconButton(
-            tooltip: '刷新',
+            tooltip: l.refresh,
             onPressed: c.refreshing ? null : c.refresh,
             icon: c.refreshing
                 ? const SizedBox(
@@ -203,12 +205,12 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (refreshing) return const Center(child: CircularProgressIndicator());
+    final l = AppLocalizations.of(context);
     final message = kIsWeb
-        ? '还没有设备推送数据。\n在电脑上的 TokenBar 开启"推送本机数据"，或运行 tokenbar collect。'
+        ? l.webEmptyMessage
         : isDesktopPlatform
-        ? '添加 Codex、Claude 或 Cursor 账户。\nTokenBar 会直接读取本机登录状态，向官方查询额度。'
-        : '添加 Cursor 账户（粘贴 cursor.com Cookie）即可直接查看额度。\n'
-              'Codex / Claude 的登录在电脑上，可选用服务器同步到手机。';
+        ? l.desktopEmptyMessage
+        : l.mobileEmptyMessage;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -217,7 +219,7 @@ class _EmptyState extends StatelessWidget {
           children: [
             Icon(Icons.speed, size: 56, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
             const SizedBox(height: 16),
-            Text('还没有额度数据', style: theme.textTheme.titleLarge),
+            Text(l.noQuotaDataYet, style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               message,
@@ -236,13 +238,13 @@ class _EmptyState extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: onOpenAccounts,
                     icon: const Icon(Icons.add),
-                    label: const Text('添加账户'),
+                    label: Text(l.addAccount),
                   ),
                 if (kIsWeb || serverMode)
                   OutlinedButton.icon(
                     onPressed: onOpenSettings,
                     icon: const Icon(Icons.dns_outlined),
-                    label: const Text('服务器设置'),
+                    label: Text(l.serverSettings),
                   ),
               ],
             ),

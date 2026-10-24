@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Thin remaining-quota bar with an optional linear-pace marker.
 class UsageBar extends StatelessWidget {
@@ -15,6 +16,7 @@ class UsageBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final color = quotaColor(remaining, theme.brightness);
     final track = theme.colorScheme.onSurface.withValues(alpha: 0.08);
@@ -49,7 +51,7 @@ class UsageBar extends StatelessWidget {
                 Positioned(
                   left: (pace.clamp(0, 100) / 100 * width - 1).clamp(0, width - 2),
                   child: Tooltip(
-                    message: '线性消耗下应剩余 ${pace.round()}%',
+                    message: l.paceTooltip(pace.round()),
                     child: Container(
                       width: 2,
                       height: height + 4,
