@@ -58,6 +58,49 @@ Future<DateTime?> fileModified(String path) async {
   }
 }
 
+/// Lists the direct children of [path] (read-only; symlinks are not followed). Files get
+/// their modification time and size. Returns an empty list when the directory is missing
+/// or unreadable.
+Future<List<LocalFileEntry>> listDirectory(String path) async {
+  final entries = <LocalFileEntry>[];
+  try {
+    final dir = Directory(path);
+    if (!await dir.exists()) return entries;
+    await for (final entity in dir.list(followLinks: false)) {
+      final name = entity.uri.pathSegments.where((s) => s.isNotEmpty).lastOrNull ?? entity.path;
+      if (entity is Directory) {
+        entries.add(LocalFileEntry(path: entity.path, name: name, isDirectory: true));
+      } else if (entity is File) {
+        try {
+          final stat = await entity.stat();
+          entries.add(
+            LocalFileEntry(
+              path: entity.path,
+              name: name,
+              isDirectory: false,
+              modified: stat.modified,
+              size: stat.size,
+            ),
+          );
+        } on FileSystemException {
+          continue;
+        }
+      }
+    }
+  } on FileSystemException {
+    return entries;
+  }
+  return entries;
+}
+
+/// Streams the lines of a text file without loading it into memory (read-only). Invalid
+/// UTF-8 is replaced instead of failing; a missing file yields an error on the stream.
+Stream<String> readLines(String path) =>
+    File(path)
+        .openRead()
+        .transform(const Utf8Decoder(allowMalformed: true))
+        .transform(const LineSplitter());
+
 Future<void> writeTextFileAtomic(String path, String contents) async {
   final target = File(path);
   await target.parent.create(recursive: true);

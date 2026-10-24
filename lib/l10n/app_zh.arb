@@ -251,6 +251,25 @@
   "selectAtLeastOne": "请至少选择一项",
   "noUsageChanges": "这段时间内没有用量变化",
   "noCostChanges": "这段时间内没有费用变化",
+  "viewQuotaWindows": "额度窗口",
+  "viewModels": "模型",
+  "viewSpend": "花费",
+  "metricTokens": "Tokens",
+  "seriesOther": "其他",
+  "historyTotal": "总计",
+  "historyEmptyTitle": "暂无历史数据",
+  "historyEmptyBody": "历史需要多次刷新才会积累，保持应用运行一段时间后再来看看。",
+  "historyEmptyModelBody": "按模型的统计读取自{source}，所选时间范围内没有记录。",
+  "@historyEmptyModelBody": {
+    "placeholders": { "source": { "type": "String" } }
+  },
+  "modelNote": "按模型的统计读取自{source}；tokens 含输入、输出与缓存，各服务的计量方式可能不同。",
+  "@modelNote": {
+    "placeholders": { "source": { "type": "String" } }
+  },
+  "modelSourceCursor": "Cursor 用量记录",
+  "modelSourceCodex": "Codex 本机日志",
+  "modelSourceLocal": "本机用量记录",
   "rangeDay": "24 小时",
   "rangeWeek": "7 天",
   "rangeMonth": "30 天",

@@ -18,6 +18,10 @@ Future<String?> readTextFile(String path) async => null;
 
 Future<DateTime?> fileModified(String path) async => null;
 
+Future<List<LocalFileEntry>> listDirectory(String path) async => const [];
+
+Stream<String> readLines(String path) => const Stream.empty();
+
 Future<void> writeTextFileAtomic(String path, String contents) async {
   throw UnsupportedError('File access is not available on this platform');
 }

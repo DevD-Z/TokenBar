@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
 import '../models/credits.dart';
+import '../models/model_usage.dart';
 import '../models/rate_window.dart';
 import '../models/usage_snapshot.dart';
 import 'fields.dart';
@@ -113,6 +114,19 @@ abstract class UsageProvider {
   /// Fetches usage. Implementations should throw [ProviderException] for
   /// expected failures; [fetchSafely] converts them into error snapshots.
   Future<UsageSnapshot> fetch(AccountConfig account, FetchContext ctx);
+
+  /// Per-model usage over `[from, to]` for a stacked bar chart, or null when this
+  /// service has no per-model data (the default) or it cannot be read right now.
+  ///
+  /// Best-effort: implementations return null instead of throwing, so it can never
+  /// affect the quota refresh. Buckets follow [modelUsageBucketWidth]. Only model names
+  /// and numbers may be returned — never prompts, file paths or credentials.
+  Future<ModelUsageSeries?> fetchModelUsage(
+    AccountConfig account,
+    FetchContext ctx, {
+    required DateTime from,
+    required DateTime to,
+  }) async => null;
 
   Future<UsageSnapshot> fetchSafely(AccountConfig account, FetchContext ctx) async {
     try {

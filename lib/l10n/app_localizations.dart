@@ -1011,6 +1011,84 @@ abstract class AppLocalizations {
   /// **'这段时间内没有费用变化'**
   String get noCostChanges;
 
+  /// No description provided for @viewQuotaWindows.
+  ///
+  /// In zh, this message translates to:
+  /// **'额度窗口'**
+  String get viewQuotaWindows;
+
+  /// No description provided for @viewModels.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get viewModels;
+
+  /// No description provided for @viewSpend.
+  ///
+  /// In zh, this message translates to:
+  /// **'花费'**
+  String get viewSpend;
+
+  /// No description provided for @metricTokens.
+  ///
+  /// In zh, this message translates to:
+  /// **'Tokens'**
+  String get metricTokens;
+
+  /// No description provided for @seriesOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get seriesOther;
+
+  /// No description provided for @historyTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'总计'**
+  String get historyTotal;
+
+  /// No description provided for @historyEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无历史数据'**
+  String get historyEmptyTitle;
+
+  /// No description provided for @historyEmptyBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'历史需要多次刷新才会积累，保持应用运行一段时间后再来看看。'**
+  String get historyEmptyBody;
+
+  /// No description provided for @historyEmptyModelBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'按模型的统计读取自{source}，所选时间范围内没有记录。'**
+  String historyEmptyModelBody(String source);
+
+  /// No description provided for @modelNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'按模型的统计读取自{source}；tokens 含输入、输出与缓存，各服务的计量方式可能不同。'**
+  String modelNote(String source);
+
+  /// No description provided for @modelSourceCursor.
+  ///
+  /// In zh, this message translates to:
+  /// **'Cursor 用量记录'**
+  String get modelSourceCursor;
+
+  /// No description provided for @modelSourceCodex.
+  ///
+  /// In zh, this message translates to:
+  /// **'Codex 本机日志'**
+  String get modelSourceCodex;
+
+  /// No description provided for @modelSourceLocal.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机用量记录'**
+  String get modelSourceLocal;
+
   /// No description provided for @rangeDay.
   ///
   /// In zh, this message translates to:

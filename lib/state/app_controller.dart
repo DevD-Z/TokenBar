@@ -23,7 +23,14 @@ class AppController extends ChangeNotifier {
     required this.desktop,
     required this.notifier,
     required this.homeWidget,
-  });
+    UsageProvider? Function(String providerId)? providerLookup,
+    DateTime Function()? clock,
+  }) : _providerLookup = providerLookup ?? ProviderRegistry.instance.byId,
+       _clock = clock ?? DateTime.now;
+
+  /// Resolves a provider by id (injectable for tests).
+  final UsageProvider? Function(String providerId) _providerLookup;
+  final DateTime Function() _clock;
 
   final Persistence persistence;
   final HistoryStore historyStore;
@@ -305,10 +312,74 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  static const _modelUsageTtl = Duration(minutes: 2);
+  static const _modelUsageTimeout = Duration(minutes: 2);
+  final Map<String, ({DateTime at, ModelUsageSeries series})> _modelUsageCache = {};
+  final Map<String, Future<ModelUsageSeries?>> _modelUsageInflight = {};
+
   /// Per-model usage over `[since, now]` for the account, or null when the
   /// service has no per-model data (or it cannot be read on this device).
-  /// TODO(model-usage): implemented by the data task; the UI already calls it.
-  Future<ModelUsageSeries?> modelUsage(String accountId, DateTime since) async => null;
+  ///
+  /// Only local accounts are answered: they are read straight from the service
+  /// (Cursor events API, Codex session logs on desktop). Accounts that only exist
+  /// on the sync server have no per-model data. Results are cached for two
+  /// minutes (key: account + `since` rounded down to the hour) so switching the
+  /// range back and forth does not re-read disks or re-request. Never throws.
+  Future<ModelUsageSeries?> modelUsage(String accountId, DateTime since) async {
+    try {
+      if (demo || !isLocalAccount(accountId)) return null;
+      final account = this.account(accountId);
+      final provider = account == null ? null : _providerLookup(account.providerId);
+      if (account == null || provider == null) return null;
+      // Local logins (Codex logs, Cursor app login) only exist on desktop.
+      if (account.sourceType == SourceType.localCli && !canUseLocalLogins) return null;
+
+      final now = _clock();
+      final hour = DateTime(since.year, since.month, since.day, since.hour);
+      final key = '$accountId|${hour.millisecondsSinceEpoch}';
+      _modelUsageCache.removeWhere((_, v) => now.difference(v.at) >= _modelUsageTtl);
+      final cached = _modelUsageCache[key];
+      if (cached != null) return cached.series;
+
+      return await (_modelUsageInflight[key] ??= _loadModelUsage(
+        key,
+        account,
+        provider,
+        since,
+        now,
+      ));
+    } catch (e) {
+      debugPrint('modelUsage failed: $e');
+      return null;
+    }
+  }
+
+  Future<ModelUsageSeries?> _loadModelUsage(
+    String key,
+    AccountConfig account,
+    UsageProvider provider,
+    DateTime since,
+    DateTime now,
+  ) async {
+    final ctx = FetchContext(allowCliFallback: false, userAgent: 'TokenBar/0.1', clock: _clock);
+    try {
+      final series = await provider
+          .fetchModelUsage(account, ctx, from: since, to: now)
+          .timeout(_modelUsageTimeout);
+      // Failures (null) are not cached so the next attempt can succeed.
+      if (series != null) _modelUsageCache[key] = (at: _clock(), series: series);
+      return series;
+    } catch (e) {
+      debugPrint('modelUsage ${provider.id} failed: ${e.runtimeType}');
+      return null;
+    } finally {
+      _modelUsageInflight.remove(key);
+      ctx.client.close();
+    }
+  }
+
+  void _dropModelUsageCache(String accountId) =>
+      _modelUsageCache.removeWhere((key, _) => key.startsWith('$accountId|'));
 
   // ---------------------------------------------------------------- accounts
 
@@ -339,6 +410,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> updateAccount(AccountConfig updated) async {
     accounts = [for (final a in accounts) a.id == updated.id ? updated : a];
+    _dropModelUsageCache(updated.id);
     await persistence.saveAccounts(accounts);
     notifyListeners();
     unawaited(refresh());
@@ -347,6 +419,7 @@ class AppController extends ChangeNotifier {
   Future<void> removeAccount(String id) async {
     accounts = accounts.where((a) => a.id != id).toList();
     _snapshots.remove(id);
+    _dropModelUsageCache(id);
     await persistence.saveAccounts(accounts);
     await persistence.deleteAccountSecret(id);
     await historyStore.removeAccount(id);

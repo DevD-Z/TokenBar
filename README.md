@@ -17,15 +17,9 @@ English | [简体中文](README.zh-CN.md)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter&logoColor=white)
 ![Providers](https://img.shields.io/badge/providers-50-8A63D2)
 
-<br>
-
-<img src="docs/screenshots/windows-dashboard-light.png" alt="TokenBar dashboard on Windows" width="49%">
-<img src="docs/screenshots/windows-history-light.png" alt="TokenBar stacked usage history on Windows" width="49%">
-
 </div>
 
 > Inspired by [CodexBar](https://github.com/steipete/CodexBar) for macOS. TokenBar brings the same idea to Windows, Android, Linux and iOS (and ships a macOS build too), and covers 50 services.
-> **The screenshots use fictional demo data.**
 
 ## Why TokenBar
 
@@ -36,13 +30,19 @@ English | [简体中文](README.zh-CN.md)
 
 ## Screenshots
 
-**Windows**
+> **The screenshots use fictional demo data.**
 
+**Desktop**
+
+<p align="center">
+  <img src="docs/screenshots/windows-dashboard-light.png" alt="TokenBar dashboard on Windows" width="49%">
+  <img src="docs/screenshots/windows-history-light.png" alt="TokenBar stacked usage history on Windows" width="49%">
+</p>
 <p align="center">
   <img src="docs/screenshots/windows-tray-panel.png" alt="Tray panel" width="26%">
 </p>
 
-**Android**
+**Mobile**
 
 <p align="center">
   <img src="docs/screenshots/android-dashboard.png" alt="Dashboard on Android" width="26%">
@@ -193,10 +193,10 @@ Download the latest build from the [**Releases**](https://github.com/lwh0630/Tok
 
 ### Windows 10 / 11 (x64 and ARM64)
 
-1. Download `tokenbar-<version>-windows-x64.zip` (Intel / AMD) or `tokenbar-<version>-windows-arm64.zip` (Windows on ARM) and extract it anywhere.
-2. Run `token_bar.exe`. The Microsoft Visual C++ Redistributable (matching your architecture) is required; install it if the app does not start.
+1. Download `tokenbar-<version>-windows-x64-setup.exe` (Intel / AMD) or `tokenbar-<version>-windows-arm64-setup.exe` (Windows on ARM) and run it.
+2. The installer is per-user by default (no administrator rights, installs to `%LOCALAPPDATA%\Programs\TokenBar`); the privileges dialog lets you install for all users instead. It adds a Start menu entry (and an optional desktop icon), upgrades in place and can be removed from **Settings → Apps**. The Visual C++ runtime is bundled. For silent installs use `/VERYSILENT`.
 
-> The Windows build is not code-signed. SmartScreen may show "Windows protected your PC": choose **More info → Run anyway**. Systems that enforce Smart App Control or an application-control policy can block unsigned executables outright. In that case, [build from source](#build-from-source).
+> The installer and the app are not code-signed. SmartScreen may show "Windows protected your PC": choose **More info → Run anyway**. Systems that enforce Smart App Control or an application-control policy can block unsigned executables outright. In that case, [build from source](#build-from-source).
 
 ### Android 7.0+ (API 24+)
 
@@ -219,9 +219,9 @@ apksigner verify --print-certs tokenbar-<version>-android-arm64-v8a.apk
 xattr -dr com.apple.quarantine /Applications/TokenBar.app
 ```
 
-### Linux x64 — experimental
+### Linux x64 / ARM64 — experimental
 
-1. Download `tokenbar-<version>-linux-x64.tar.gz` and extract it.
+1. Download `tokenbar-<version>-linux-x64.tar.gz` (Intel / AMD) or `tokenbar-<version>-linux-arm64.tar.gz` (ARM, for example Raspberry Pi 4/5 or Asahi Linux) and extract it.
 2. Run `./token_bar` inside the extracted folder.
 
 Runtime libraries: GTK 3, `libsecret` (credential storage, with a running keyring such as GNOME Keyring or KWallet) and `libayatana-appindicator3` (tray icon). On Debian / Ubuntu: `sudo apt install libgtk-3-0 libsecret-1-0 libayatana-appindicator3-1`. On GNOME the tray icon needs the AppIndicator extension. Linux tray icons only offer a menu (no click event), so the compact tray panel is not available there: use the menu's **Open TokenBar**.
@@ -239,7 +239,7 @@ Runtime libraries: GTK 3, `libsecret` (credential storage, with a running keyrin
 | Android | Supported. Tested on an Android emulator (API 37); CI builds on every push and releases are signed. |
 | Web | Builds in CI. Intended for use with the sync server (browsers cannot reach most provider endpoints directly). |
 | macOS | Works in the maintainer's testing; CI builds it on every push. Ad-hoc signed and not notarized (see the install note above). Separate Apple Silicon and Intel images. |
-| Linux | Experimental. CI builds it on every push, but it has **not been run on a real machine**. The tray is a menu only (no tray panel). |
+| Linux x64, ARM64 | Experimental. CI builds both natively on every push, but they have **not been run on a real machine**. The tray is a menu only (no tray panel). |
 | iOS | Experimental. CI builds an **unsigned** IPA (sideload only); it has **not been run on a device**. The WidgetKit sources are not built into it. |
 
 ## Getting started
@@ -256,6 +256,8 @@ Runtime libraries: GTK 3, `libsecret` (credential storage, with a running keyrin
 - *Cost*: the money or credits spent per cost item.
 
 Providers rarely report usage per model, so "models" here are the breakdowns the endpoint exposes. History is recorded locally from the first run on.
+
+Cursor and Codex can additionally be viewed **per model** as a stacked bar chart (tokens, plus cost where it is known). Cursor reads its dashboard events feed (local login or cookie, so phones work too). Codex reads the local session logs under `~/.codex/sessions` and therefore needs the desktop app; the logs are read-only and only model names and token counts are taken from them, never prompt or file content.
 
 ## Updates
 
@@ -344,12 +346,12 @@ tool/gen_icons.py         Regenerates the app icons for every platform
 
 ## Releasing
 
-Releases are cut by [`release.yml`](.github/workflows/release.yml): push a `vX.Y.Z` tag (or run the workflow by hand). It checks, builds and signs per-ABI Android APKs with the key stored in the `production` environment, builds the Windows x64 and ARM64 zips, the Linux tarball, the macOS Apple Silicon and Intel disk images and the unsigned iOS IPA, and creates a **draft** release with `SHA256SUMS.txt`. Nothing goes public until the draft is published by hand. APKs are verified against the expected certificate fingerprint before upload.
+Releases are cut by [`release.yml`](.github/workflows/release.yml): push a `vX.Y.Z` tag (or run the workflow by hand). It checks, builds and signs per-ABI Android APKs with the key stored in the `production` environment, builds the Windows x64 and ARM64 installers, the Linux x64 and ARM64 tarballs, the macOS Apple Silicon and Intel disk images and the unsigned iOS IPA, and creates a **draft** release with `SHA256SUMS.txt`. Nothing goes public until the draft is published by hand. APKs are verified against the expected certificate fingerprint before upload.
 
 ## Roadmap
 
 - Provider-supplied text is still Chinese: setup hints, field labels and error messages in `packages/tokenbar_core`, plus the less common quota and credit labels. The app UI itself is translated (`lib/l10n/`); more UI languages can be added there.
-- Verify the Linux, iOS and Windows ARM64 builds on real devices.
+- Verify the Linux (x64, ARM64), iOS and Windows ARM64 builds on real devices.
 - Code-signed Windows build and a signed, notarized macOS build (both need paid certificates).
 - More providers. Adding one is small and well-trodden: see [AGENTS.md](AGENTS.md) for the steps and the rules (documented endpoints only, no invented APIs, no credentials in logs).
 

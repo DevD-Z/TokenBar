@@ -532,6 +532,49 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noCostChanges => '这段时间内没有费用变化';
 
   @override
+  String get viewQuotaWindows => '额度窗口';
+
+  @override
+  String get viewModels => '模型';
+
+  @override
+  String get viewSpend => '花费';
+
+  @override
+  String get metricTokens => 'Tokens';
+
+  @override
+  String get seriesOther => '其他';
+
+  @override
+  String get historyTotal => '总计';
+
+  @override
+  String get historyEmptyTitle => '暂无历史数据';
+
+  @override
+  String get historyEmptyBody => '历史需要多次刷新才会积累，保持应用运行一段时间后再来看看。';
+
+  @override
+  String historyEmptyModelBody(String source) {
+    return '按模型的统计读取自$source，所选时间范围内没有记录。';
+  }
+
+  @override
+  String modelNote(String source) {
+    return '按模型的统计读取自$source；tokens 含输入、输出与缓存，各服务的计量方式可能不同。';
+  }
+
+  @override
+  String get modelSourceCursor => 'Cursor 用量记录';
+
+  @override
+  String get modelSourceCodex => 'Codex 本机日志';
+
+  @override
+  String get modelSourceLocal => '本机用量记录';
+
+  @override
   String get rangeDay => '24 小时';
 
   @override

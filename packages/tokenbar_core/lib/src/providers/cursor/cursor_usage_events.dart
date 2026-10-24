@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
+import '../../models/model_usage.dart';
 import '../../util/json_utils.dart';
 import '../common.dart' show moneyText;
+import '../model_usage_buckets.dart';
 
 /// One row of `POST https://cursor.com/api/dashboard/get-filtered-usage-events`.
 ///
@@ -167,6 +169,32 @@ List<CursorModelUsage> summarizeCursorModelUsage(Iterable<CursorUsageEvent> even
     return a.model.compareTo(b.model);
   });
   return rows;
+}
+
+/// Groups events by time bucket × model for a stacked chart over `[from, to]`.
+///
+/// `tokens` is the event's token total, `costUsd` is `chargedCents / 100` (null for a
+/// bucket/model when any of its events lacks `chargedCents`) and `requests` counts events.
+/// Events without a valid timestamp, or outside the range, are ignored. Bucket width and
+/// alignment come from [modelUsageBucketWidth] (local time zone).
+ModelUsageSeries buildCursorModelUsageSeries(
+  Iterable<CursorUsageEvent> events, {
+  required DateTime from,
+  required DateTime to,
+}) {
+  final aggregator = ModelUsageAggregator(from: from, to: to);
+  for (final event in events) {
+    final ts = event.timestampMs;
+    if (ts == null || ts <= 0) continue;
+    final cents = event.chargedCents;
+    aggregator.add(
+      DateTime.fromMillisecondsSinceEpoch(ts),
+      event.model,
+      tokens: event.tokens.toDouble(),
+      costUsd: cents == null ? null : cents / 100,
+    );
+  }
+  return aggregator.build(source: 'cursor-events');
 }
 
 class _ModelAccumulator {

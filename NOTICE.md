@@ -46,3 +46,10 @@ file mapping.
 Flutter, Dart and the packages listed in `pubspec.yaml` are used under their
 own licenses (mostly BSD-3-Clause, MIT and Apache-2.0). Run `flutter pub deps`
 for the full list.
+
+## Windows installer
+
+The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php). `windows/installer/ChineseSimplified.isl`
+is the unofficial Simplified Chinese translation from the Inno Setup repository
+(`Files/Languages/Unofficial/ChineseSimplified.isl`, tag `is-6_5_4`, maintained by
+Zhenghan Yang), used under the Inno Setup license.

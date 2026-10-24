@@ -559,6 +559,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noCostChanges => 'No cost changes in this period';
 
   @override
+  String get viewQuotaWindows => 'Quota';
+
+  @override
+  String get viewModels => 'Models';
+
+  @override
+  String get viewSpend => 'Spend';
+
+  @override
+  String get metricTokens => 'Tokens';
+
+  @override
+  String get seriesOther => 'Other';
+
+  @override
+  String get historyTotal => 'Total';
+
+  @override
+  String get historyEmptyTitle => 'No history yet';
+
+  @override
+  String get historyEmptyBody =>
+      'History builds up over repeated refreshes. Keep the app running for a while and check back.';
+
+  @override
+  String historyEmptyModelBody(String source) {
+    return 'Per-model usage is read from $source; nothing was recorded in this range.';
+  }
+
+  @override
+  String modelNote(String source) {
+    return 'Per-model usage is read from $source. Tokens include input, output and cache; providers may count them differently.';
+  }
+
+  @override
+  String get modelSourceCursor => 'Cursor usage events';
+
+  @override
+  String get modelSourceCodex => 'Codex local logs';
+
+  @override
+  String get modelSourceLocal => 'local usage records';
+
+  @override
   String get rangeDay => '24 hours';
 
   @override

@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import '../../models/account.dart';
+import '../../models/model_usage.dart';
 import '../../models/usage_snapshot.dart';
 import '../../platform/platform.dart' as platform;
 import '../../util/json_utils.dart';
 import '../provider.dart';
 import 'codex_credentials.dart';
+import 'codex_model_usage.dart';
 import 'codex_usage_parser.dart';
 
 /// Codex (ChatGPT plan) limits.
@@ -95,6 +97,26 @@ class CodexProvider extends UsageProvider {
       if (rpc != null) return rpc;
     }
     throw oauthError;
+  }
+
+  /// Per-model token usage from the local session logs (desktop only; read-only, numbers
+  /// and model names only). Null when this platform has no local file access, the log
+  /// directory does not exist, or anything goes wrong.
+  @override
+  Future<ModelUsageSeries?> fetchModelUsage(
+    AccountConfig account,
+    FetchContext ctx, {
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    if (!platform.localAccessSupported) return null;
+    try {
+      final home = resolveCodexHome(account.homeDir);
+      if (home == null) return null;
+      return await loadCodexModelUsage(home, from, to);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<UsageSnapshot> _fetchOAuth(

@@ -17,7 +17,12 @@ export 'src/providers/claude/claude_provider.dart';
 export 'src/providers/claude/claude_usage_parser.dart';
 export 'src/providers/codex/codex_credentials.dart'
     show CodexCredentials, resolveCodexHome, parseChatGptBaseUrl, codexUsageUri;
+export 'src/providers/codex/codex_model_usage.dart'
+    show collectCodexFileUsage, listCodexSessionFiles, loadCodexModelUsage;
+export 'src/providers/codex/codex_pricing.dart' show CodexPrice, codexCostUsd, codexPriceFor;
 export 'src/providers/codex/codex_provider.dart';
+export 'src/providers/codex/codex_session_parser.dart'
+    show CodexSessionParser, CodexTokenDelta, CodexTotals;
 export 'src/providers/codex/codex_usage_parser.dart';
 export 'src/providers/cursor/cursor_provider.dart';
 export 'src/providers/cursor/cursor_session.dart' show CursorSession, cursorStateDbPath;
@@ -25,6 +30,7 @@ export 'src/providers/cursor/cursor_usage_events.dart'
     show
         CursorModelUsage,
         CursorUsageEvent,
+        buildCursorModelUsageSeries,
         cursorModelExtras,
         parseCursorUsageEventsPage,
         reconcileCursorEventPages,
@@ -33,6 +39,7 @@ export 'src/providers/cursor/cursor_usage_parser.dart';
 export 'src/providers/common.dart' show isPrivateHost, gatewayBaseUrl, moneyText;
 export 'src/providers/fields.dart';
 export 'src/providers/http_support.dart';
+export 'src/providers/model_usage_buckets.dart';
 export 'src/providers/provider.dart';
 export 'src/providers/registry.dart';
 export 'src/sync/api_client.dart';

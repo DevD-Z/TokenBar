@@ -44,6 +44,24 @@ Duration bucketFor(Duration range) {
   return const Duration(days: 1);
 }
 
+/// Index of the bucket containing [t] (the last start that is <= [t]),
+/// or -1 when [t] is before the first bucket.
+int bucketIndexFor(List<DateTime> starts, DateTime t) {
+  var lo = 0;
+  var hi = starts.length - 1;
+  var found = -1;
+  while (lo <= hi) {
+    final mid = (lo + hi) >> 1;
+    if (starts[mid].isAfter(t)) {
+      hi = mid - 1;
+    } else {
+      found = mid;
+      lo = mid + 1;
+    }
+  }
+  return found;
+}
+
 /// Windows that are aggregates of other windows (session, weekly, monthly
 /// totals). Stacking them together with their own components double counts.
 bool isAggregateWindow(String id) =>
@@ -69,10 +87,15 @@ StackedHistory buildStackedHistory({
   required DateTime start,
   required DateTime end,
   required Duration bucket,
+  List<DateTime>? alignedStarts,
 }) {
   final sorted = [...points]..sort((a, b) => a.at.compareTo(b.at));
-  final count = (end.difference(start).inMilliseconds / bucket.inMilliseconds).ceil().clamp(1, 400);
-  final starts = [for (var i = 0; i < count; i++) start.add(bucket * i)];
+  // With [alignedStarts] (see `alignedBucketStarts`) the buckets sit on clock
+  // boundaries; otherwise they are fixed-width slices from [start].
+  final count =
+      alignedStarts?.length ??
+      (end.difference(start).inMilliseconds / bucket.inMilliseconds).ceil().clamp(1, 400);
+  final starts = alignedStarts ?? [for (var i = 0; i < count; i++) start.add(bucket * i)];
   final buckets = List.generate(count, (_) => <String, double>{});
   final totals = <String, double>{};
   final previous = <String, double>{};
@@ -89,10 +112,13 @@ StackedHistory buildStackedHistory({
       if (delta <= 0.0001) continue;
       final at = p.at.toLocal();
       if (at.isBefore(start) || at.isAfter(end)) continue;
-      final i = (at.difference(start).inMilliseconds / bucket.inMilliseconds).floor().clamp(
-        0,
-        count - 1,
-      );
+      final i = alignedStarts != null
+          ? bucketIndexFor(starts, at)
+          : (at.difference(start).inMilliseconds / bucket.inMilliseconds).floor().clamp(
+              0,
+              count - 1,
+            );
+      if (i < 0) continue;
       buckets[i][entry.key] = (buckets[i][entry.key] ?? 0) + delta;
       totals[entry.key] = (totals[entry.key] ?? 0) + delta;
     }

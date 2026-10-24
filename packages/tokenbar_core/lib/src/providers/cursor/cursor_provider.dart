@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../models/account.dart';
+import '../../models/model_usage.dart';
 import '../../models/usage_snapshot.dart';
 import '../../platform/platform.dart' as platform;
 import '../../util/json_utils.dart';
@@ -113,6 +114,39 @@ class CursorProvider extends UsageProvider {
     FetchContext ctx,
   ) async {
     if (cycleStart == null) return null;
+    final events = await _fetchEvents(session, cycleStart, ctx.now(), ctx);
+    return events == null ? null : summarizeCursorModelUsage(events);
+  }
+
+  /// Per-model usage over time for the history chart, from the same events feed. Works
+  /// with the local Cursor login and with a pasted cookie. Never throws: any failure,
+  /// expired login or unreconcilable page set yields null.
+  @override
+  Future<ModelUsageSeries?> fetchModelUsage(
+    AccountConfig account,
+    FetchContext ctx, {
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    try {
+      final session = await _session(account);
+      if (session.isExpired(ctx.now())) return null;
+      final events = await _fetchEvents(session, from, to, ctx);
+      if (events == null) return null;
+      return buildCursorModelUsageSeries(events, from: from, to: to);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Every event in `[start, end]`, or null when the feed cannot be read completely (at
+  /// most [_maxEventPages] pages; never a partial list). Any failure yields null.
+  Future<List<CursorUsageEvent>?> _fetchEvents(
+    CursorSession session,
+    DateTime start,
+    DateTime end,
+    FetchContext ctx,
+  ) async {
     try {
       final pages = <List<CursorUsageEvent>>[];
       int? expectedTotal;
@@ -123,8 +157,8 @@ class CursorProvider extends UsageProvider {
           {
             'page': page,
             'pageSize': _eventPageSize,
-            'startDate': '${cycleStart.millisecondsSinceEpoch}',
-            'endDate': '${ctx.now().millisecondsSinceEpoch}',
+            'startDate': '${start.millisecondsSinceEpoch}',
+            'endDate': '${end.millisecondsSinceEpoch}',
           },
           session,
           ctx,
@@ -146,8 +180,7 @@ class CursorProvider extends UsageProvider {
         }
       }
       if (!completed) return null;
-      final events = reconcileCursorEventPages(pages, expectedTotal);
-      return events == null ? null : summarizeCursorModelUsage(events);
+      return reconcileCursorEventPages(pages, expectedTotal);
     } catch (_) {
       return null;
     }

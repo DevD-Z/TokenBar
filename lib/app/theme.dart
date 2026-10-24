@@ -264,14 +264,21 @@ Color quotaColor(double remaining, Brightness brightness) {
   return dark ? const Color(0xFFFF453A) : const Color(0xFFFF3B30);
 }
 
-/// Colors for stacked series (models / windows), in a fixed order.
+/// Colors for stacked series (models / windows), in a fixed order. Ten
+/// distinct hues of similar lightness that read on both light and dark cards;
+/// neighbours differ strongly so the first few series are easy to tell apart.
 const seriesPalette = [
-  Color(0xFF0A84FF),
-  Color(0xFF30D158),
-  Color(0xFFFF9F0A),
-  Color(0xFFBF5AF2),
-  Color(0xFFFF453A),
-  Color(0xFF64D2FF),
-  Color(0xFFFFD60A),
-  Color(0xFFFF6482),
+  Color(0xFF3B82F6), // blue
+  Color(0xFF10B981), // emerald
+  Color(0xFFF59E0B), // amber
+  Color(0xFF8B5CF6), // violet
+  Color(0xFFF43F5E), // rose
+  Color(0xFF06B6D4), // cyan
+  Color(0xFFF97316), // orange
+  Color(0xFF6366F1), // indigo
+  Color(0xFFEC4899), // pink
+  Color(0xFF84CC16), // lime
 ];
+
+/// Color of the merged "Other" series.
+const seriesOtherColor = Color(0xFF9CA3AF);

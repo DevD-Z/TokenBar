@@ -27,7 +27,7 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
     'month': Duration(days: 30),
   };
   String _range = 'week';
-  Future<List<UsagePoint>>? _history;
+  Future<_ChartData>? _history;
   DateTime? _loadedFor;
 
   static String _rangeLabel(AppLocalizations l, String id) => switch (id) {
@@ -38,7 +38,23 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
 
   void _load(AppController c) {
     _loadedFor = c.lastRefresh;
-    _history = c.history(widget.accountId, DateTime.now().subtract(_ranges[_range]!));
+    _history = _fetch(c, DateTime.now().subtract(_ranges[_range]!));
+  }
+
+  /// Quota history and per-model usage for the same range, loaded together.
+  /// Per-model usage failing only hides the model view; history errors surface.
+  Future<_ChartData> _fetch(AppController c, DateTime since) async {
+    Future<ModelUsageSeries?> models() async {
+      try {
+        return await c.modelUsage(widget.accountId, since);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final pending = models();
+    final points = await c.history(widget.accountId, since);
+    return _ChartData(points, await pending);
   }
 
   @override
@@ -161,14 +177,11 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            FutureBuilder<List<UsagePoint>>(
+                            FutureBuilder<_ChartData>(
                               future: _history,
                               builder: (context, snap) {
                                 if (snap.connectionState != ConnectionState.done) {
-                                  return const SizedBox(
-                                    height: 220,
-                                    child: Center(child: CircularProgressIndicator()),
-                                  );
+                                  return const HistorySkeleton();
                                 }
                                 if (snap.hasError) {
                                   return SizedBox(
@@ -179,7 +192,8 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
                                   );
                                 }
                                 return HistoryChart(
-                                  points: snap.data ?? const [],
+                                  points: snap.data?.points ?? const [],
+                                  modelUsage: snap.data?.models,
                                   range: _ranges[_range]!,
                                   windowLabels: {
                                     for (final w in s.windows) w.id: windowLabel(l, w),
@@ -245,6 +259,13 @@ class _AccountDetailPageState extends State<AccountDetailPage> {
       ),
     ),
   );
+}
+
+class _ChartData {
+  const _ChartData(this.points, this.models);
+
+  final List<UsagePoint> points;
+  final ModelUsageSeries? models;
 }
 
 class _Projection extends StatelessWidget {
