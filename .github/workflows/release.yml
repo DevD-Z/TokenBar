@@ -247,7 +247,9 @@ jobs:
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          architecture: ${{ matrix.arch }}
+          # Flutter publishes no arm64 Windows SDK: the x64 SDK runs emulated on
+          # the ARM runner and builds an arm64 target there.
+          architecture: x64
           cache: true
 
       - name: Get dependencies
@@ -267,6 +269,13 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           $out = "build/windows/$env:ARCH/runner/Release"
           if (-not (Test-Path "$out/token_bar.exe")) { throw "token_bar.exe not found in $out" }
+          # PE header: machine type 0xAA64 = arm64, 0x8664 = x64.
+          $bytes = [IO.File]::ReadAllBytes((Resolve-Path "$out/token_bar.exe"))
+          $pe = [BitConverter]::ToInt32($bytes, 0x3C)
+          $machine = '{0:X4}' -f [BitConverter]::ToUInt16($bytes, $pe + 4)
+          $expected = if ($env:ARCH -eq 'arm64') { 'AA64' } else { '8664' }
+          Write-Host "token_bar.exe machine type: 0x$machine (expected 0x$expected)"
+          if ($machine -ne $expected) { throw "wrong machine type for $env:ARCH" }
           Compress-Archive -Path "$out/*" -DestinationPath "dist/tokenbar-$env:TAG-windows-$env:ARCH.zip"
           Get-ChildItem dist
 

@@ -123,6 +123,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Flutter publishes no arm64 Windows SDK: the x64 SDK runs emulated on
+          # the ARM runner and builds an arm64 target there.
           - arch: x64
             runner: windows-latest
           - arch: arm64
@@ -139,7 +141,7 @@ jobs:
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          architecture: ${{ matrix.arch }}
+          architecture: x64
           cache: true
 
       - name: Get dependencies
@@ -147,6 +149,24 @@ jobs:
 
       - name: Build Windows (release)
         run: flutter build windows --release
+
+      - name: Check the target architecture
+        env:
+          ARCH: ${{ matrix.arch }}
+        shell: pwsh
+        run: |
+          $exe = "build/windows/$env:ARCH/runner/Release/token_bar.exe"
+          if (-not (Test-Path $exe)) {
+            Get-ChildItem build/windows -Recurse -Filter token_bar.exe | ForEach-Object FullName
+            throw "$exe not found"
+          }
+          # PE header: machine type 0xAA64 = arm64, 0x8664 = x64.
+          $bytes = [IO.File]::ReadAllBytes((Resolve-Path $exe))
+          $pe = [BitConverter]::ToInt32($bytes, 0x3C)
+          $machine = '{0:X4}' -f [BitConverter]::ToUInt16($bytes, $pe + 4)
+          $expected = if ($env:ARCH -eq 'arm64') { 'AA64' } else { '8664' }
+          Write-Host "token_bar.exe machine type: 0x$machine (expected 0x$expected)"
+          if ($machine -ne $expected) { throw "wrong machine type" }
 
   linux:
     name: Build Linux
