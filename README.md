@@ -35,8 +35,8 @@ English | [简体中文](README.zh-CN.md)
 **Desktop**
 
 <p align="center">
-  <img src="docs/screenshots/windows-dashboard-light.png" alt="TokenBar dashboard on Windows" width="49%">
-  <img src="docs/screenshots/windows-history-light.png" alt="TokenBar stacked usage history on Windows" width="49%">
+  <img src="docs/screenshots/windows-dashboard.png" alt="TokenBar dashboard on Windows" width="49%">
+  <img src="docs/screenshots/windows-history.png" alt="TokenBar stacked usage history on Windows" width="49%">
 </p>
 <p align="center">
   <img src="docs/screenshots/windows-tray-panel.png" alt="Tray panel" width="26%">
@@ -322,7 +322,7 @@ keytool -genkeypair -keystore your.jks -alias tokenbar -keyalg RSA -keysize 4096
 
 Debug builds (`flutter run`, `flutter build apk --debug`) need no key.
 
-**Demo mode.** `flutter run --dart-define=TOKENBAR_DEMO=true` starts with fictional accounts and a simulated month of history. It uses in-memory storage, makes no network requests and never touches your real settings or credentials. It is what the screenshots above were taken with.
+**Demo mode.** `flutter run --dart-define=TOKENBAR_DEMO=true` (add `--dart-define=TOKENBAR_DEMO_LANG=en` or `zh` to pin the UI language) starts with fictional accounts and a simulated month of history. It uses in-memory storage, makes no network requests and never touches your real settings or credentials. It is what the screenshots above were taken with.
 
 ### Tests
 

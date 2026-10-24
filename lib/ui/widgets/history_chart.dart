@@ -734,6 +734,9 @@ class _SummaryList extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: FractionallySizedBox(
                   widthFactor: f,
+                  // Align gives loose constraints and a child-less DecoratedBox
+                  // shrinks to nothing, so the height has to be forced.
+                  heightFactor: 1,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: r.color,

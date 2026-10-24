@@ -144,6 +144,20 @@ void main() {
       expect(find.textContaining('Cursor'), findsOneWidget);
     });
 
+    testWidgets('share bars are actually drawn (non-zero height and width)', (tester) async {
+      await _pump(tester, chart: _chart(models: _threeModels));
+      await tester.pumpAndSettle();
+      final bars = find.byWidgetPredicate(
+        (w) => w is FractionallySizedBox && w.widthFactor != null,
+      );
+      expect(bars, findsNWidgets(3));
+      for (final e in bars.evaluate()) {
+        final size = tester.getSize(find.byWidget(e.widget));
+        expect(size.height, greaterThan(0));
+        expect(size.width, greaterThan(0));
+      }
+    });
+
     testWidgets('share list is sorted by total, biggest first', (tester) async {
       await _pump(tester, chart: _chart(models: _threeModels));
       // Totals: claude-opus 3.0M, gpt-5 2.5M, auto 1.0M.

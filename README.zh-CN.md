@@ -35,19 +35,19 @@
 **桌面端**
 
 <p align="center">
-  <img src="docs/screenshots/windows-dashboard-light.png" alt="Windows 上的额度总览" width="49%">
-  <img src="docs/screenshots/windows-history-light.png" alt="Windows 上的堆叠式使用历史" width="49%">
+  <img src="docs/screenshots/zh/windows-dashboard.png" alt="Windows 上的额度总览" width="49%">
+  <img src="docs/screenshots/zh/windows-history.png" alt="Windows 上的堆叠式使用历史" width="49%">
 </p>
 <p align="center">
-  <img src="docs/screenshots/windows-tray-panel.png" alt="托盘小面板" width="26%">
+  <img src="docs/screenshots/zh/windows-tray-panel.png" alt="托盘小面板" width="26%">
 </p>
 
 **移动端**
 
 <p align="center">
-  <img src="docs/screenshots/android-dashboard.png" alt="Android 额度总览" width="26%">
-  <img src="docs/screenshots/android-detail.png" alt="Android 账户详情" width="26%">
-  <img src="docs/screenshots/android-history.png" alt="Android 使用历史" width="26%">
+  <img src="docs/screenshots/zh/android-dashboard.png" alt="Android 额度总览" width="26%">
+  <img src="docs/screenshots/zh/android-detail.png" alt="Android 账户详情" width="26%">
+  <img src="docs/screenshots/zh/android-history.png" alt="Android 使用历史" width="26%">
 </p>
 
 ## 功能
@@ -320,7 +320,7 @@ keytool -genkeypair -keystore your.jks -alias tokenbar -keyalg RSA -keysize 4096
 
 调试构建（`flutter run`、`flutter build apk --debug`）不需要密钥。
 
-**演示模式。** `flutter run --dart-define=TOKENBAR_DEMO=true` 使用虚构的账户和一个月的模拟历史启动。它使用内存存储，不发任何网络请求，也不会碰你真实的设置或凭证。上面的截图就是这样拍的。
+**演示模式。** `flutter run --dart-define=TOKENBAR_DEMO=true`（加 `--dart-define=TOKENBAR_DEMO_LANG=en` 或 `zh` 可固定界面语言）使用虚构的账户和一个月的模拟历史启动。它使用内存存储，不发任何网络请求，也不会碰你真实的设置或凭证。上面的截图就是这样拍的。
 
 ### 测试
 

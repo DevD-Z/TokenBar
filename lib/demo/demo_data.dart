@@ -2,10 +2,19 @@ import 'dart:math';
 
 import 'package:tokenbar_core/tokenbar_core.dart';
 
+import '../state/settings.dart';
+
 /// Build with `--dart-define=TOKENBAR_DEMO=true` to run on the fictional data
 /// below. Nothing is read from or written to the real settings, accounts,
 /// secure storage or history, so it is safe for screenshots and demos.
 const bool kDemoMode = bool.fromEnvironment('TOKENBAR_DEMO');
+
+/// Optional `--dart-define=TOKENBAR_DEMO_LANG=en|zh` pins the UI language in demo
+/// mode (for screenshots in both languages); anything else follows the system.
+AppLanguage get demoLanguage => AppLanguage.values.firstWhere(
+  (l) => l.name == const String.fromEnvironment('TOKENBAR_DEMO_LANG'),
+  orElse: () => AppLanguage.system,
+);
 
 /// Fictional accounts, usage snapshots and a month of hourly history.
 ///

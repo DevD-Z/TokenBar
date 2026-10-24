@@ -68,6 +68,7 @@ class AppController extends ChangeNotifier {
     demo = true;
     _demoData = data;
     settings = AppSettings.defaults().copyWith(
+      language: demoLanguage,
       notificationsEnabled: false,
       autoCheckUpdates: false,
       minimizeToTray: true,

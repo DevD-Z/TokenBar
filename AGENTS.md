@@ -41,7 +41,7 @@ cd packages/tokenbar_server && dart build cli -o ../../build/server         # �
 
 完成改动后至少跑 analyze + 格式检查 + 相关测试，三处都要绿。
 
-演示模式：`flutter run --dart-define=TOKENBAR_DEMO=true`（数据在 `lib/demo/demo_data.dart`，内存存储，不碰真实凭证；README 截图用它拍）。
+演示模式：`flutter run --dart-define=TOKENBAR_DEMO=true`（数据在 `lib/demo/demo_data.dart`，内存存储，不碰真实凭证；README 截图用它拍：英文放 `docs/screenshots/`，中文放 `docs/screenshots/zh/`，用 `--dart-define=TOKENBAR_DEMO_LANG=en|zh` 固定语言；托盘面板加 `--dart-entrypoint-args=--panel`；Cursor / Codex 的分模型用量也是虚构的，见 `DemoData.modelUsage`）。
 加 `--dart-define=TOKENBAR_PANEL=true` 直接打开托盘面板。截图里不得出现真实邮箱、本机路径（演示模式已隐藏路径）。
 
 ## 核心概念

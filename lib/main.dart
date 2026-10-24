@@ -24,7 +24,9 @@ Future<void> main(List<String> args) async {
 
   final demoData = kDemoMode ? DemoData(DateTime.now()) : null;
   final persistence = demoData == null ? await Persistence.open() : await Persistence.openDemo();
-  final settings = await persistence.loadSettings();
+  final settings = demoData == null
+      ? await persistence.loadSettings()
+      : (await persistence.loadSettings()).copyWith(language: demoLanguage);
   final desktop = DesktopIntegration();
   final notifier = Notifier();
   final homeWidget = HomeWidgetBridge();
