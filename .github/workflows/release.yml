@@ -1,7 +1,7 @@
 name: Release
 
-# Builds signed Android APKs (one per ABI), a Windows x64 zip, a Linux x64 tarball,
-# an unsigned macOS disk image and an unsigned iOS IPA, and creates a
+# Builds signed Android APKs (one per ABI), Windows x64 and arm64 zips, a Linux x64
+# tarball, macOS arm64 and x86_64 disk images and an unsigned iOS IPA, and creates a
 # DRAFT GitHub Release. Nothing is published automatically: review the draft,
 # then publish it by hand. (TokenBar's in-app update check only sees published,
 # non-draft, non-pre-release releases.)
@@ -220,11 +220,21 @@ jobs:
           retention-days: 30
 
   windows:
-    name: Build Windows x64
+    name: Build Windows ${{ matrix.arch }}
     needs: version
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     # No signing secrets here.
+    strategy:
+      # Flutter cannot cross-compile Windows, so each architecture is built
+      # natively on its own runner.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
 
     steps:
       - name: Check out the repository
@@ -237,6 +247,7 @@ jobs:
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
+          architecture: ${{ matrix.arch }}
           cache: true
 
       - name: Get dependencies
@@ -251,15 +262,18 @@ jobs:
       - name: Zip the build
         env:
           TAG: ${{ needs.version.outputs.tag }}
+          ARCH: ${{ matrix.arch }}
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath "dist/tokenbar-$env:TAG-windows-x64.zip"
+          $out = "build/windows/$env:ARCH/runner/Release"
+          if (-not (Test-Path "$out/token_bar.exe")) { throw "token_bar.exe not found in $out" }
+          Compress-Archive -Path "$out/*" -DestinationPath "dist/tokenbar-$env:TAG-windows-$env:ARCH.zip"
           Get-ChildItem dist
 
       - name: Upload Windows zip
         uses: actions/upload-artifact@v7
         with:
-          name: tokenbar-windows
+          name: tokenbar-windows-${{ matrix.arch }}
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -319,13 +333,12 @@ jobs:
           retention-days: 30
 
   macos:
-    name: Build macOS (universal, unsigned)
+    name: Build macOS (arm64 and x86_64)
     needs: version
     runs-on: macos-latest
     timeout-minutes: 50
     # No signing secrets here. There is no Apple Developer account behind this
-    # project, so the app is only ad-hoc signed: not notarized, and Gatekeeper
-    # will ask the user to confirm the first launch.
+    # project, so the app is only ad-hoc signed and not notarized.
 
     steps:
       - name: Check out the repository
@@ -349,25 +362,56 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: flutter build macos --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
 
-      - name: Check the app bundle
+      - name: Check the universal app bundle
         run: |
           app="build/macos/Build/Products/Release/TokenBar.app"
           test -d "$app"
-          # Apple Silicon refuses to run unsigned code, so the bundle must at
-          # least carry an (ad-hoc) signature and be internally consistent.
           codesign --verify --deep --strict --verbose=2 "$app"
-          codesign -dv "$app" 2>&1 | grep -E 'Signature|Authority|Identifier' || true
-          lipo -archs "$app/Contents/MacOS/TokenBar"
+          archs="$(lipo -archs "$app/Contents/MacOS/TokenBar")"
+          echo "Built architectures: $archs"
+          # Flutter builds a universal binary; the per-architecture disk images
+          # below are thinned from it.
+          [[ "$archs" == *arm64* && "$archs" == *x86_64* ]]
 
-      - name: Create the disk image
+      # Flutter always builds universal binaries, so each architecture-specific
+      # app is made by thinning every fat Mach-O file in a copy of the bundle and
+      # then re-signing it ad hoc (Apple Silicon refuses unsigned code, and thinning
+      # invalidates the existing signature).
+      - name: Create per-architecture disk images
         env:
           TAG: ${{ needs.version.outputs.tag }}
         run: |
-          mkdir -p dist stage
-          cp -R "build/macos/Build/Products/Release/TokenBar.app" stage/
-          ln -s /Applications stage/Applications
-          hdiutil create -volname "TokenBar" -srcfolder stage -ov -format UDZO \
-            "dist/tokenbar-${TAG}-macos-universal.dmg"
+          set -euo pipefail
+          src="build/macos/Build/Products/Release/TokenBar.app"
+          mkdir -p dist
+
+          for arch in arm64 x86_64; do
+            stage="stage-$arch"
+            rm -rf "$stage"
+            mkdir -p "$stage"
+            ditto "$src" "$stage/TokenBar.app"
+
+            while IFS= read -r -d '' f; do
+              if lipo -archs "$f" 2>/dev/null | grep -q ' '; then
+                lipo "$f" -thin "$arch" -output "$f.thin"
+                cat "$f.thin" > "$f" # keep the file mode
+                rm "$f.thin"
+              fi
+            done < <(find "$stage/TokenBar.app" -type f -print0)
+
+            codesign --force --deep --sign - \
+              --entitlements macos/Runner/Release.entitlements \
+              "$stage/TokenBar.app"
+            codesign --verify --deep --strict --verbose=2 "$stage/TokenBar.app"
+
+            actual="$(lipo -archs "$stage/TokenBar.app/Contents/MacOS/TokenBar")"
+            echo "$arch image: $actual"
+            [ "$actual" = "$arch" ]
+
+            ln -s /Applications "$stage/Applications"
+            hdiutil create -volname "TokenBar" -srcfolder "$stage" -ov -format UDZO \
+              "dist/tokenbar-${TAG}-macos-${arch}.dmg"
+          done
           ls -l dist
 
       - name: Upload macOS disk image
@@ -470,10 +514,12 @@ jobs:
           | Platform | File |
           | --- | --- |
           | Windows 10/11 (x64) | \`tokenbar-${TAG}-windows-x64.zip\` - unzip and run \`token_bar.exe\` |
+          | Windows 11 on ARM (arm64) | \`tokenbar-${TAG}-windows-arm64.zip\` - unzip and run \`token_bar.exe\` |
           | Android 64-bit (most phones) | \`tokenbar-${TAG}-android-arm64-v8a.apk\` |
           | Android 32-bit ARM | \`tokenbar-${TAG}-android-armeabi-v7a.apk\` |
           | Android x86_64 (emulator) | \`tokenbar-${TAG}-android-x86_64.apk\` |
-          | macOS 12+ (Apple Silicon and Intel) | \`tokenbar-${TAG}-macos-universal.dmg\` - **unsigned, not notarized** |
+          | macOS 12+ (Apple Silicon: M1 and later) | \`tokenbar-${TAG}-macos-arm64.dmg\` |
+          | macOS 12+ (Intel) | \`tokenbar-${TAG}-macos-x86_64.dmg\` |
           | Linux x64 | \`tokenbar-${TAG}-linux-x64.tar.gz\` - extract and run \`token_bar\` |
           | iOS 15+ | \`tokenbar-${TAG}-ios-unsigned.ipa\` - **unsigned**, sideload only |
 
@@ -483,13 +529,13 @@ jobs:
           ### Platform notes
 
           - **Windows** is not code-signed: SmartScreen may warn; choose *More info > Run anyway*.
-          - **macOS** is only ad-hoc signed and not notarized. After copying it to
-            Applications, right-click the app and choose *Open* the first time, or run
+          - **macOS**: if the first launch is blocked, right-click the app in
+            Applications and choose *Open*, or run
             \`xattr -dr com.apple.quarantine /Applications/TokenBar.app\`.
           - **iOS** has no Apple signature. It cannot be installed as is: re-sign and
             sideload it with your own Apple ID (AltStore, Sideloadly, ...).
-          - **macOS, Linux and iOS builds are built by CI but have not been tested on
-            real devices yet.** Please report problems in the issue tracker.
+          - **Linux, iOS and Windows on ARM builds are built by CI but have not been
+            tested on real devices yet.** Please report problems in the issue tracker.
           EOF
 
           # Always a DRAFT: it is not public until you publish it by hand.
