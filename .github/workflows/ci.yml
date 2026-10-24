@@ -167,28 +167,28 @@ jobs:
       - name: Build Windows (release)
         run: flutter build windows --release
 
-      - name: Check the target architecture
+      # Verifies the exe's machine type, builds the Inno Setup installer and
+      # smoke-tests a silent install and uninstall.
+      - name: Build and test the installer
         env:
           ARCH: ${{ matrix.arch }}
         shell: pwsh
         run: |
-          $exe = "build/windows/$env:ARCH/runner/Release/token_bar.exe"
-          if (-not (Test-Path $exe)) {
-            Get-ChildItem build/windows -Recurse -Filter token_bar.exe | ForEach-Object FullName
-            throw "$exe not found"
-          }
-          # PE header: machine type 0xAA64 = arm64, 0x8664 = x64.
-          $bytes = [IO.File]::ReadAllBytes((Resolve-Path $exe))
-          $pe = [BitConverter]::ToInt32($bytes, 0x3C)
-          $machine = '{0:X4}' -f [BitConverter]::ToUInt16($bytes, $pe + 4)
-          $expected = if ($env:ARCH -eq 'arm64') { 'AA64' } else { '8664' }
-          Write-Host "token_bar.exe machine type: 0x$machine (expected 0x$expected)"
-          if ($machine -ne $expected) { throw "wrong machine type" }
+          ./tool/build_windows_installer.ps1 -Arch $env:ARCH -Version 0.0.0-ci `
+            -OutputName "tokenbar-ci-windows-$env:ARCH-setup" -OutputDir dist
 
   linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
+    name: Build Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
 
     steps:
       - name: Check out the repository
@@ -204,17 +204,47 @@ jobs:
             libsecret-1-dev libayatana-appindicator3-dev
 
       - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        if: matrix.arch == 'x64'
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
+      # Flutter publishes no arm64 Linux SDK archive, so on the ARM runner the
+      # tagged source is cloned; its first run downloads the arm64 Dart SDK.
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }} (arm64, from source)
+        if: matrix.arch == 'arm64'
+        run: |
+          sdk="$RUNNER_TEMP/flutter"
+          git clone --depth 1 --branch "$FLUTTER_VERSION" --single-branch https://github.com/flutter/flutter.git "$sdk"
+          sha="$(git -C "$sdk" rev-parse HEAD)"
+          if [ "$sha" != "$FLUTTER_COMMIT" ]; then
+            echo "::error::Flutter $FLUTTER_VERSION resolved to $sha, expected $FLUTTER_COMMIT"
+            exit 1
+          fi
+          echo "$sdk/bin" >> "$GITHUB_PATH"
+
+      - name: Show the Flutter host
+        run: flutter --version
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Build Linux (release)
         run: flutter build linux --release
+
+      - name: Check the target architecture
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          kind="$(file -b "build/linux/$ARCH/release/bundle/token_bar")"
+          echo "$kind"
+          case "$ARCH" in
+            x64)   grep -q 'x86-64' <<< "$kind" ;;
+            arm64) grep -q 'ARM aarch64' <<< "$kind" ;;
+          esac
 
   macos:
     name: Build macOS

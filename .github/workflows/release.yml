@@ -278,25 +278,20 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: flutter build windows --release --build-name="$env:BUILD_NAME" --build-number="$env:BUILD_NUMBER"
 
-      - name: Zip the build
+      # Verifies the exe's machine type, bundles the Visual C++ runtime, builds the
+      # Inno Setup installer and smoke-tests a silent install and uninstall.
+      - name: Build the installer
         env:
           TAG: ${{ needs.version.outputs.tag }}
+          BUILD_NAME: ${{ needs.version.outputs.name }}
           ARCH: ${{ matrix.arch }}
+        shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          $out = "build/windows/$env:ARCH/runner/Release"
-          if (-not (Test-Path "$out/token_bar.exe")) { throw "token_bar.exe not found in $out" }
-          # PE header: machine type 0xAA64 = arm64, 0x8664 = x64.
-          $bytes = [IO.File]::ReadAllBytes((Resolve-Path "$out/token_bar.exe"))
-          $pe = [BitConverter]::ToInt32($bytes, 0x3C)
-          $machine = '{0:X4}' -f [BitConverter]::ToUInt16($bytes, $pe + 4)
-          $expected = if ($env:ARCH -eq 'arm64') { 'AA64' } else { '8664' }
-          Write-Host "token_bar.exe machine type: 0x$machine (expected 0x$expected)"
-          if ($machine -ne $expected) { throw "wrong machine type for $env:ARCH" }
-          Compress-Archive -Path "$out/*" -DestinationPath "dist/tokenbar-$env:TAG-windows-$env:ARCH.zip"
+          ./tool/build_windows_installer.ps1 -Arch $env:ARCH -Version $env:BUILD_NAME `
+            -OutputName "tokenbar-$env:TAG-windows-$env:ARCH-setup" -OutputDir dist
           Get-ChildItem dist
 
-      - name: Upload Windows zip
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v7
         with:
           name: tokenbar-windows-${{ matrix.arch }}
@@ -305,11 +300,21 @@ jobs:
           retention-days: 30
 
   linux:
-    name: Build Linux x64
+    name: Build Linux ${{ matrix.arch }}
     needs: version
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     # No signing secrets here.
+    strategy:
+      # Flutter cannot cross-compile Linux either, so each architecture is built
+      # natively on its own runner.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
 
     steps:
       - name: Check out the repository
@@ -325,11 +330,29 @@ jobs:
             libsecret-1-dev libayatana-appindicator3-dev
 
       - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        if: matrix.arch == 'x64'
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
+
+      # Flutter publishes no arm64 Linux SDK archive, so on the ARM runner the
+      # tagged source is cloned; its first run downloads the arm64 Dart SDK.
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }} (arm64, from source)
+        if: matrix.arch == 'arm64'
+        run: |
+          sdk="$RUNNER_TEMP/flutter"
+          git clone --depth 1 --branch "$FLUTTER_VERSION" --single-branch https://github.com/flutter/flutter.git "$sdk"
+          sha="$(git -C "$sdk" rev-parse HEAD)"
+          if [ "$sha" != "$FLUTTER_COMMIT" ]; then
+            echo "::error::Flutter $FLUTTER_VERSION resolved to $sha, expected $FLUTTER_COMMIT"
+            exit 1
+          fi
+          echo "$sdk/bin" >> "$GITHUB_PATH"
+
+      - name: Show the Flutter host
+        run: flutter --version
 
       - name: Get dependencies
         run: flutter pub get
@@ -343,17 +366,29 @@ jobs:
       - name: Package the bundle
         env:
           TAG: ${{ needs.version.outputs.tag }}
+          ARCH: ${{ matrix.arch }}
         run: |
-          dir="tokenbar-${TAG}-linux-x64"
+          set -euo pipefail
+          bundle="build/linux/$ARCH/release/bundle"
+          test -x "$bundle/token_bar"
+          # The binary must really be for this architecture.
+          kind="$(file -b "$bundle/token_bar")"
+          echo "$kind"
+          case "$ARCH" in
+            x64)   grep -q 'x86-64' <<< "$kind" ;;
+            arm64) grep -q 'ARM aarch64' <<< "$kind" ;;
+          esac
+
+          dir="tokenbar-${TAG}-linux-${ARCH}"
           mkdir -p dist stage
-          cp -r build/linux/x64/release/bundle "stage/$dir"
+          cp -r "$bundle" "stage/$dir"
           tar -C stage -czf "dist/$dir.tar.gz" "$dir"
           ls -l dist
 
       - name: Upload Linux archive
         uses: actions/upload-artifact@v7
         with:
-          name: tokenbar-linux
+          name: tokenbar-linux-${{ matrix.arch }}
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -539,14 +574,15 @@ jobs:
 
           | Platform | File |
           | --- | --- |
-          | Windows 10/11 (x64) | \`tokenbar-${TAG}-windows-x64.zip\` - unzip and run \`token_bar.exe\` |
-          | Windows 11 on ARM (arm64) | \`tokenbar-${TAG}-windows-arm64.zip\` - unzip and run \`token_bar.exe\` |
+          | Windows 10/11 (x64) | \`tokenbar-${TAG}-windows-x64-setup.exe\` - installer |
+          | Windows 11 on ARM (arm64) | \`tokenbar-${TAG}-windows-arm64-setup.exe\` - installer |
           | Android 64-bit (most phones) | \`tokenbar-${TAG}-android-arm64-v8a.apk\` |
           | Android 32-bit ARM | \`tokenbar-${TAG}-android-armeabi-v7a.apk\` |
           | Android x86_64 (emulator) | \`tokenbar-${TAG}-android-x86_64.apk\` |
           | macOS 12+ (Apple Silicon: M1 and later) | \`tokenbar-${TAG}-macos-arm64.dmg\` |
           | macOS 12+ (Intel) | \`tokenbar-${TAG}-macos-x86_64.dmg\` |
           | Linux x64 | \`tokenbar-${TAG}-linux-x64.tar.gz\` - extract and run \`token_bar\` |
+          | Linux ARM64 | \`tokenbar-${TAG}-linux-arm64.tar.gz\` - extract and run \`token_bar\` |
           | iOS 15+ | \`tokenbar-${TAG}-ios-unsigned.ipa\` - **unsigned**, sideload only |
 
           Verify a download with \`SHA256SUMS.txt\`. Android APKs are signed with the
@@ -554,14 +590,15 @@ jobs:
 
           ### Platform notes
 
-          - **Windows** is not code-signed: SmartScreen may warn; choose *More info > Run anyway*.
+          - **Windows** installers are not code-signed: SmartScreen may warn; choose
+            *More info > Run anyway*. The installer is per-user by default (no admin rights).
           - **macOS**: if the first launch is blocked, right-click the app in
             Applications and choose *Open*, or run
             \`xattr -dr com.apple.quarantine /Applications/TokenBar.app\`.
           - **iOS** has no Apple signature. It cannot be installed as is: re-sign and
             sideload it with your own Apple ID (AltStore, Sideloadly, ...).
-          - **Linux, iOS and Windows on ARM builds are built by CI but have not been
-            tested on real devices yet.** Please report problems in the issue tracker.
+          - **Linux (x64 and ARM64), iOS and Windows on ARM builds are built by CI but
+            have not been tested on real devices yet.** Please report problems in the issue tracker.
           EOF
 
           # Always a DRAFT: it is not public until you publish it by hand.
