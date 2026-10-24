@@ -24,6 +24,8 @@ env:
   #   Flutter 3.47.7 ships Dart 3.13.5, which satisfies pubspec.yaml (sdk: ^3.13.5).
   #   JDK 17 matches the Java 17 source/target in android/app/build.gradle.kts.
   FLUTTER_VERSION: "3.47.7"
+  # Commit of the Flutter 3.47.7 tag; used to build the Windows arm64 SDK from source.
+  FLUTTER_COMMIT: "abaf9c523780a608bd46686fd5e53740a07077f8"
   JAVA_VERSION: "17"
 
 jobs:
@@ -123,8 +125,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Flutter publishes no arm64 Windows SDK: the x64 SDK runs emulated on
-          # the ARM runner and builds an arm64 target there.
           - arch: x64
             runner: windows-latest
           - arch: arm64
@@ -137,12 +137,29 @@ jobs:
           persist-credentials: false
 
       - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        if: matrix.arch == 'x64'
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          architecture: x64
           cache: true
+
+      # Flutter publishes no arm64 Windows SDK archive, so on the ARM runner the
+      # tagged source is cloned; its first run downloads the arm64 Dart SDK and the
+      # tool then builds a native arm64 app.
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }} (arm64, from source)
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          $sdk = Join-Path $env:RUNNER_TEMP 'flutter'
+          git clone --depth 1 --branch $env:FLUTTER_VERSION --single-branch https://github.com/flutter/flutter.git $sdk
+          $sha = git -C $sdk rev-parse HEAD
+          if ($sha -ne $env:FLUTTER_COMMIT) { throw "Flutter $env:FLUTTER_VERSION resolved to $sha, expected $env:FLUTTER_COMMIT" }
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $sdk 'bin')
+
+      - name: Show the Flutter host
+        shell: pwsh
+        run: flutter --version
 
       - name: Get dependencies
         run: flutter pub get
