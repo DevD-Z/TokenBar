@@ -86,7 +86,8 @@ cd packages/tokenbar_server && dart build cli -o ../../build/server         # �
 
 ## 发布与更新
 
-- 发布：推送 `vX.Y.Z` 标签触发 `.github/workflows/release.yml`，生成**草稿** Release（Android 分 ABI 签名 APK + Windows zip + `SHA256SUMS.txt`），手动发布后才对外可见。`ci.yml` 只检查与构建。
+- 发布：推送 `vX.Y.Z` 标签触发 `.github/workflows/release.yml`，生成**草稿** Release（Android 分 ABI 签名 APK + Windows zip + Linux tar.gz + macOS dmg + iOS 未签名 ipa + `SHA256SUMS.txt`），手动发布后才对外可见。`ci.yml` 只检查与构建（含 Linux / macOS / iOS）。
+- macOS / iOS 没有 Apple 开发者账号：macOS 只有 ad-hoc 签名（不公证），iOS 用 `--no-codesign` 后手工打包 `Payload/Runner.app` 成 ipa，只能侧载。这三个平台**未在真机验证**，README 与 Release 说明必须保持这个表述。Linux 构建需要 `libgtk-3-dev libsecret-1-dev libayatana-appindicator3-dev` 等（见 workflow）。
 - 检查更新：`lib/services/update/`（`UpdateService` 读 `releases/latest`，忽略草稿 / 预发布，只信任 github.com 链接）+ `state/update_controller.dart`。只打开发布页，不自动下载安装。仓库名常量在 `lib/app_info.dart`。
 - 版本号：`pubspec.yaml` 的 `version` 是开发默认值，CI 用 tag 覆盖 `--build-name`，`--build-number` 取 `github.run_number`。
 

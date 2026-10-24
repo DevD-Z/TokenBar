@@ -1,6 +1,7 @@
 name: Release
 
-# Builds signed Android APKs (one per ABI) and a Windows x64 zip, and creates a
+# Builds signed Android APKs (one per ABI), a Windows x64 zip, a Linux x64 tarball,
+# an unsigned macOS disk image and an unsigned iOS IPA, and creates a
 # DRAFT GitHub Release. Nothing is published automatically: review the draft,
 # then publish it by hand. (TokenBar's in-app update check only sees published,
 # non-draft, non-pre-release releases.)
@@ -263,9 +264,173 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  linux:
+    name: Build Linux x64
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # No signing secrets here.
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install system packages
+        # GTK for the shell, libsecret for flutter_secure_storage, appindicator for the tray.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            libsecret-1-dev libayatana-appindicator3-dev
+
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Linux (release)
+        env:
+          BUILD_NAME: ${{ needs.version.outputs.name }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: flutter build linux --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+
+      - name: Package the bundle
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          dir="tokenbar-${TAG}-linux-x64"
+          mkdir -p dist stage
+          cp -r build/linux/x64/release/bundle "stage/$dir"
+          tar -C stage -czf "dist/$dir.tar.gz" "$dir"
+          ls -l dist
+
+      - name: Upload Linux archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: tokenbar-linux
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    name: Build macOS (universal, unsigned)
+    needs: version
+    runs-on: macos-latest
+    timeout-minutes: 50
+    # No signing secrets here. There is no Apple Developer account behind this
+    # project, so the app is only ad-hoc signed: not notarized, and Gatekeeper
+    # will ask the user to confirm the first launch.
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build macOS (release)
+        env:
+          BUILD_NAME: ${{ needs.version.outputs.name }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: flutter build macos --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+
+      - name: Check the app bundle
+        run: |
+          app="build/macos/Build/Products/Release/TokenBar.app"
+          test -d "$app"
+          # Apple Silicon refuses to run unsigned code, so the bundle must at
+          # least carry an (ad-hoc) signature and be internally consistent.
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign -dv "$app" 2>&1 | grep -E 'Signature|Authority|Identifier' || true
+          lipo -archs "$app/Contents/MacOS/TokenBar"
+
+      - name: Create the disk image
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          mkdir -p dist stage
+          cp -R "build/macos/Build/Products/Release/TokenBar.app" stage/
+          ln -s /Applications stage/Applications
+          hdiutil create -volname "TokenBar" -srcfolder stage -ov -format UDZO \
+            "dist/tokenbar-${TAG}-macos-universal.dmg"
+          ls -l dist
+
+      - name: Upload macOS disk image
+        uses: actions/upload-artifact@v7
+        with:
+          name: tokenbar-macos
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    name: Build iOS (unsigned IPA)
+    needs: version
+    runs-on: macos-latest
+    timeout-minutes: 50
+    # No signing secrets here. The IPA is NOT signed: it cannot be installed
+    # directly, only re-signed and sideloaded (AltStore, Sideloadly, ...) with
+    # the user's own Apple ID.
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build iOS (release, no code signing)
+        env:
+          BUILD_NAME: ${{ needs.version.outputs.name }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: flutter build ios --release --no-codesign --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+
+      - name: Package the unsigned IPA
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          app="build/ios/iphoneos/Runner.app"
+          test -d "$app"
+          mkdir -p dist stage/Payload
+          cp -R "$app" stage/Payload/
+          (cd stage && zip -qry "../dist/tokenbar-${TAG}-ios-unsigned.ipa" Payload)
+          ls -l dist
+
+      - name: Upload iOS IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: tokenbar-ios
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
   publish:
     name: Create draft GitHub Release
-    needs: [version, android, windows]
+    needs: [version, android, windows, linux, macos, ios]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # No signing secrets here: this job only uploads the already built files.
@@ -308,9 +473,23 @@ jobs:
           | Android 64-bit (most phones) | \`tokenbar-${TAG}-android-arm64-v8a.apk\` |
           | Android 32-bit ARM | \`tokenbar-${TAG}-android-armeabi-v7a.apk\` |
           | Android x86_64 (emulator) | \`tokenbar-${TAG}-android-x86_64.apk\` |
+          | macOS 12+ (Apple Silicon and Intel) | \`tokenbar-${TAG}-macos-universal.dmg\` - **unsigned, not notarized** |
+          | Linux x64 | \`tokenbar-${TAG}-linux-x64.tar.gz\` - extract and run \`token_bar\` |
+          | iOS 15+ | \`tokenbar-${TAG}-ios-unsigned.ipa\` - **unsigned**, sideload only |
 
           Verify a download with \`SHA256SUMS.txt\`. Android APKs are signed with the
           TokenBar release key (certificate SHA-256 \`${EXPECTED_CERT_SHA256}\`).
+
+          ### Platform notes
+
+          - **Windows** is not code-signed: SmartScreen may warn; choose *More info > Run anyway*.
+          - **macOS** is only ad-hoc signed and not notarized. After copying it to
+            Applications, right-click the app and choose *Open* the first time, or run
+            \`xattr -dr com.apple.quarantine /Applications/TokenBar.app\`.
+          - **iOS** has no Apple signature. It cannot be installed as is: re-sign and
+            sideload it with your own Apple ID (AltStore, Sideloadly, ...).
+          - **macOS, Linux and iOS builds are built by CI but have not been tested on
+            real devices yet.** Please report problems in the issue tracker.
           EOF
 
           # Always a DRAFT: it is not public until you publish it by hand.

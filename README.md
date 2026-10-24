@@ -13,7 +13,7 @@ English | [简体中文](README.zh-CN.md)
 [![CI](https://github.com/lwh0630/TokenBar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lwh0630/TokenBar/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/lwh0630/TokenBar?display_name=tag&sort=semver)](https://github.com/lwh0630/TokenBar/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-![Platforms](https://img.shields.io/badge/Windows%20%C2%B7%20Android-supported-2ea44f)
+![Platforms](https://img.shields.io/badge/platforms-Windows%20%C2%B7%20Android%20%C2%B7%20macOS%20%C2%B7%20Linux%20%C2%B7%20iOS-2ea44f)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter&logoColor=white)
 ![Providers](https://img.shields.io/badge/providers-50-8A63D2)
 
@@ -24,7 +24,7 @@ English | [简体中文](README.zh-CN.md)
 
 </div>
 
-> Inspired by [CodexBar](https://github.com/steipete/CodexBar) for macOS. TokenBar brings the same idea to Windows and Android, and covers 50 services.
+> Inspired by [CodexBar](https://github.com/steipete/CodexBar) for macOS. TokenBar brings the same idea to Windows, Android, Linux and iOS (and ships a macOS build too), and covers 50 services.
 > **The screenshots use fictional demo data.**
 
 ## Why TokenBar
@@ -213,6 +213,26 @@ apksigner verify --print-certs tokenbar-<version>-android-arm64-v8a.apk
 # certificate SHA-256 digest: c04373ec39a24dd04d6f6797ed984be27d172c01fc30833f957845bb5b622d27
 ```
 
+### macOS 12+ (Apple Silicon and Intel) — experimental
+
+1. Download `tokenbar-<version>-macos-universal.dmg`, open it and drag **TokenBar** to **Applications**.
+2. The app is **not signed with an Apple Developer ID and not notarized**, so Gatekeeper blocks the first launch. Right-click the app and choose **Open**, or run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/TokenBar.app
+```
+
+### Linux x64 — experimental
+
+1. Download `tokenbar-<version>-linux-x64.tar.gz` and extract it.
+2. Run `./token_bar` inside the extracted folder.
+
+Runtime libraries: GTK 3, `libsecret` (credential storage, with a running keyring such as GNOME Keyring or KWallet) and `libayatana-appindicator3` (tray icon). On Debian / Ubuntu: `sudo apt install libgtk-3-0 libsecret-1-0 libayatana-appindicator3-1`. On GNOME the tray icon needs the AppIndicator extension.
+
+### iOS 15+ — experimental, sideload only
+
+`tokenbar-<version>-ios-unsigned.ipa` is **not signed**, and there is no Apple Developer account behind this project, so the file cannot be installed as is. Re-sign and install it with your own Apple ID through a sideloading tool such as [AltStore](https://altstore.io) or [Sideloadly](https://sideloadly.io) (free Apple IDs have to renew the install every 7 days). The Home Screen widget is not part of the IPA.
+
 ### Platform status
 
 | Platform | Status |
@@ -220,8 +240,8 @@ apksigner verify --print-certs tokenbar-<version>-android-arm64-v8a.apk
 | Windows | Supported. Built and tested on Windows 11; CI builds a release on every push. |
 | Android | Supported. Tested on an Android emulator (API 37); CI builds on every push and releases are signed. |
 | Web | Builds in CI. Intended for use with the sync server (browsers cannot reach most provider endpoints directly). |
-| macOS, Linux | Project files and code paths exist (tray, local logins) but have **not been run on real machines**. Contributions and bug reports welcome. |
-| iOS | Project files and widget sources exist; **untested** and not distributed. |
+| macOS, Linux | Experimental. CI builds them on every push and releases include them (macOS unsigned and not notarized), but they have **not been run on real machines**. Contributions and bug reports welcome. |
+| iOS | Experimental. CI builds an **unsigned** IPA (sideload only); it has **not been run on a device**. The WidgetKit sources are not built into it. |
 
 ## Getting started
 
@@ -325,13 +345,13 @@ tool/gen_icons.py         Regenerates the app icons for every platform
 
 ## Releasing
 
-Releases are cut by [`release.yml`](.github/workflows/release.yml): push a `vX.Y.Z` tag (or run the workflow by hand). It checks, builds and signs per-ABI Android APKs with the key stored in the `production` environment, builds the Windows zip, and creates a **draft** release with `SHA256SUMS.txt`. Nothing goes public until the draft is published by hand. APKs are verified against the expected certificate fingerprint before upload.
+Releases are cut by [`release.yml`](.github/workflows/release.yml): push a `vX.Y.Z` tag (or run the workflow by hand). It checks, builds and signs per-ABI Android APKs with the key stored in the `production` environment, builds the Windows zip, the Linux tarball, the unsigned macOS disk image and the unsigned iOS IPA, and creates a **draft** release with `SHA256SUMS.txt`. Nothing goes public until the draft is published by hand. APKs are verified against the expected certificate fingerprint before upload.
 
 ## Roadmap
 
 - English (and other) UI localization. The interface is Simplified Chinese today.
-- Verify and ship macOS and Linux builds.
-- A code-signed Windows build.
+- Verify the macOS, Linux and iOS builds on real devices.
+- Code-signed Windows build and a signed, notarized macOS build (both need paid certificates).
 - More providers. Adding one is small and well-trodden: see [AGENTS.md](AGENTS.md) for the steps and the rules (documented endpoints only, no invented APIs, no credentials in logs).
 
 ## Contributing

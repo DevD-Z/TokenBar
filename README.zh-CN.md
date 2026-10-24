@@ -13,7 +13,7 @@
 [![CI](https://github.com/lwh0630/TokenBar/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lwh0630/TokenBar/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/lwh0630/TokenBar?display_name=tag&sort=semver)](https://github.com/lwh0630/TokenBar/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-![Platforms](https://img.shields.io/badge/Windows%20%C2%B7%20Android-supported-2ea44f)
+![Platforms](https://img.shields.io/badge/platforms-Windows%20%C2%B7%20Android%20%C2%B7%20macOS%20%C2%B7%20Linux%20%C2%B7%20iOS-2ea44f)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47-02569B?logo=flutter&logoColor=white)
 ![Providers](https://img.shields.io/badge/providers-50-8A63D2)
 
@@ -24,7 +24,7 @@
 
 </div>
 
-> 灵感来自 macOS 上的 [CodexBar](https://github.com/steipete/CodexBar)。TokenBar 把同样的思路带到 Windows 和 Android，并支持 50 个服务。
+> 灵感来自 macOS 上的 [CodexBar](https://github.com/steipete/CodexBar)。TokenBar 把同样的思路带到 Windows、Android、Linux 和 iOS（也提供 macOS 版本），并支持 50 个服务。
 > **截图中的数据均为虚构的演示数据。**
 
 ## 为什么用 TokenBar
@@ -211,6 +211,26 @@ apksigner verify --print-certs tokenbar-<版本>-android-arm64-v8a.apk
 # certificate SHA-256 digest: c04373ec39a24dd04d6f6797ed984be27d172c01fc30833f957845bb5b622d27
 ```
 
+### macOS 12+（Apple 芯片与 Intel）— 实验性
+
+1. 下载 `tokenbar-<version>-macos-universal.dmg`，打开后把 **TokenBar** 拖进**应用程序**。
+2. 应用**没有 Apple 开发者 ID 签名，也没有公证**，所以首次启动会被“门禁”（Gatekeeper）拦下。右键点击应用选择**打开**，或者执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/TokenBar.app
+```
+
+### Linux x64 — 实验性
+
+1. 下载 `tokenbar-<version>-linux-x64.tar.gz` 并解压。
+2. 运行解压目录里的 `./token_bar`。
+
+运行时依赖：GTK 3、`libsecret`（凭证存储，需要 GNOME Keyring 或 KWallet 之类的密钥环在运行）和 `libayatana-appindicator3`（托盘图标）。Debian / Ubuntu：`sudo apt install libgtk-3-0 libsecret-1-0 libayatana-appindicator3-1`。GNOME 桌面需要安装 AppIndicator 扩展才能显示托盘图标。
+
+### iOS 15+ — 实验性，仅支持侧载
+
+`tokenbar-<version>-ios-unsigned.ipa` **没有签名**，本项目也没有 Apple 开发者账号，所以不能直接安装。请用你自己的 Apple ID，通过 [AltStore](https://altstore.io) 或 [Sideloadly](https://sideloadly.io) 之类的侧载工具重新签名并安装（免费 Apple ID 每 7 天需要续签一次）。主屏幕小组件不包含在 IPA 里。
+
 ### 平台状态
 
 | 平台 | 状态 |
@@ -218,8 +238,8 @@ apksigner verify --print-certs tokenbar-<版本>-android-arm64-v8a.apk
 | Windows | 已支持。在 Windows 11 上构建并测试；CI 每次推送都会构建 release。 |
 | Android | 已支持。在 Android 模拟器（API 37）上测试；CI 每次推送都会构建，发布版本经过签名。 |
 | Web | CI 会构建。适合配合同步服务器使用（浏览器无法直接访问大多数服务商接口）。 |
-| macOS、Linux | 已有工程文件和代码路径（托盘、本机登录），但**尚未在真机上运行验证**。欢迎贡献和反馈。 |
-| iOS | 有工程文件和小组件源码；**未测试**，不提供下载。 |
+| macOS、Linux | 实验性。CI 每次推送都会构建，发布版本也包含它们（macOS 未签名、未公证），但**尚未在真机上运行验证**。欢迎贡献和反馈。 |
+| iOS | 实验性。CI 构建**未签名**的 IPA（仅支持侧载），**尚未在真机上运行**。WidgetKit 源码没有编进 IPA。 |
 
 ## 开始使用
 
@@ -323,13 +343,13 @@ tool/gen_icons.py         重新生成各平台的应用图标
 
 ## 发布流程
 
-发布由 [`release.yml`](.github/workflows/release.yml) 完成：推送 `vX.Y.Z` 标签（或手动运行工作流）。它会检查并构建，用存放在 `production` 环境中的密钥给各 ABI 的 Android APK 签名，构建 Windows 压缩包，并创建带 `SHA256SUMS.txt` 的**草稿** Release。手动发布草稿之前不会公开任何内容。上传前会用预期的证书指纹校验 APK。
+发布由 [`release.yml`](.github/workflows/release.yml) 完成：推送 `vX.Y.Z` 标签（或手动运行工作流）。它会检查并构建，用存放在 `production` 环境中的密钥给各 ABI 的 Android APK 签名，构建 Windows 压缩包、Linux 压缩包、未签名的 macOS 磁盘映像和未签名的 iOS IPA，并创建带 `SHA256SUMS.txt` 的**草稿** Release。手动发布草稿之前不会公开任何内容。上传前会用预期的证书指纹校验 APK。
 
 ## 路线图
 
 - 英文（及其他语言）界面本地化。目前界面为简体中文。
-- 验证并发布 macOS 与 Linux 版本。
-- 带代码签名的 Windows 版本。
+- 在真机上验证 macOS、Linux 和 iOS 版本。
+- 带代码签名的 Windows 版本，以及签名并公证的 macOS 版本（都需要付费证书）。
 - 更多服务。新增一个服务工作量小、路径清晰：步骤和规则（只用有文档的接口、不虚构 API、不把凭证写进日志）见 [AGENTS.md](AGENTS.md)。
 
 ## 参与贡献
