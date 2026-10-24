@@ -1,0 +1,26 @@
+{
+  "data": {
+    "codingPlanInstanceInfos": [
+      {
+        "planName": "Expired Starter",
+        "status": "EXPIRED",
+        "endTime": "2025-04-01 17:00",
+        "codingPlanQuotaInfo": {
+          "per5HourUsedQuota": 7,
+          "per5HourTotalQuota": 100,
+          "per5HourQuotaNextRefreshTime": 1700000100000
+        }
+      },
+      {
+        "planName": "Active Pro",
+        "status": "VALID",
+        "codingPlanQuotaInfo": {
+          "per5HourUsedQuota": 52,
+          "per5HourTotalQuota": 1000,
+          "per5HourQuotaNextRefreshTime": 1700000300000
+        }
+      }
+    ]
+  },
+  "status_code": 0
+}

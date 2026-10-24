@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "data": {
+    "biz_data": {
+      "series": [{
+        "api_key": {"name":"main","tracking_id":"key-1"},
+        "model": "deepseek-chat",
+        "buckets": [{
+          "time": 1779796800,
+          "usage": {
+            "PROMPT_CACHE_HIT_TOKEN": "100",
+            "PROMPT_CACHE_MISS_TOKEN": 50,
+            "RESPONSE_TOKEN": 25,
+            "REQUEST": 2
+          }
+        }]
+      }]
+    }
+  }
+}

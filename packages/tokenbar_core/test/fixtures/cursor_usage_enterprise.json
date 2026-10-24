@@ -1,0 +1,15 @@
+{
+  "billingCycleStart": "2026-10-01T00:00:00.000Z",
+  "billingCycleEnd": "2026-11-01T00:00:00.000Z",
+  "membershipType": "enterprise",
+  "limitType": "team",
+  "isUnlimited": false,
+  "autoModelSelectedDisplayMessage": "You've used 0% of your included total usage",
+  "namedModelSelectedDisplayMessage": "You've used 5% of your included total usage",
+  "individualUsage": {
+    "overall": { "enabled": true, "used": 4408, "limit": 80000, "remaining": 75592 }
+  },
+  "teamUsage": {
+    "onDemand": { "enabled": false, "used": 0, "limit": null, "remaining": null }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "usesTokenRateLimitsBilling": true,
+  "extraUsageBalanceCents": 2500,
+  "overagePreference": null,
+  "extraUsageAllowed": false,
+  "tokenRateLimitsRolloutEligible": true,
+  "limits": {
+    "standard": {
+      "fiveHour": { "usedPercent": 12, "secondsRemaining": 3600 },
+      "weekly": { "usedPercent": 34, "secondsRemaining": 7200 },
+      "monthly": { "usedPercent": 56, "secondsRemaining": 10800 }
+    }
+  }
+}

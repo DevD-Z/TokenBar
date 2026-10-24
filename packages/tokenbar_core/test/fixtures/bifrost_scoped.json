@@ -1,0 +1,7 @@
+{"is_active":false,"provider_configs":[{"provider":"openai",
+  "budgets":[{"id":"provider-budget","max_limit":100,"current_usage":25,"reset_duration":"1M"}],
+  "rate_limit":{"id":"provider-rate","request_max_limit":100,"request_current_usage":10}}],
+ "model_configs":[{"model_name":"gpt-4o","provider":"openai",
+  "budgets":[{"id":"model-budget","max_limit":20,"current_usage":10,"reset_duration":"1Q",
+              "reset_config":{"quarter_start_month":4},"last_reset":"2026-10-01T00:00:00Z"}],
+  "rate_limit":{"id":"model-rate","token_reset_duration":"1h"}}]}

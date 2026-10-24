@@ -1,0 +1,30 @@
+/// TokenBar core: provider fetchers, models and sync client (pure Dart).
+library;
+
+export 'src/models/account.dart';
+export 'src/models/credits.dart';
+export 'src/models/rate_window.dart';
+export 'src/models/usage_point.dart';
+export 'src/models/usage_snapshot.dart';
+export 'src/platform/platform.dart' show localAccessSupported;
+export 'src/providers/claude/claude_credentials.dart'
+    show ClaudeCredentials, resolveClaudeConfigDir;
+export 'src/providers/api/account_api_providers.dart'
+    show parseCosmicAllowance, ibmBobAuthorization, ibmBobRegionalBase;
+export 'src/providers/api/coding_plan_providers.dart' show sumDecimalStrings;
+export 'src/providers/claude/claude_provider.dart';
+export 'src/providers/claude/claude_usage_parser.dart';
+export 'src/providers/codex/codex_credentials.dart'
+    show CodexCredentials, resolveCodexHome, parseChatGptBaseUrl, codexUsageUri;
+export 'src/providers/codex/codex_provider.dart';
+export 'src/providers/codex/codex_usage_parser.dart';
+export 'src/providers/cursor/cursor_provider.dart';
+export 'src/providers/cursor/cursor_session.dart' show CursorSession, cursorStateDbPath;
+export 'src/providers/cursor/cursor_usage_parser.dart';
+export 'src/providers/common.dart' show isPrivateHost, gatewayBaseUrl, moneyText;
+export 'src/providers/fields.dart';
+export 'src/providers/http_support.dart';
+export 'src/providers/provider.dart';
+export 'src/providers/registry.dart';
+export 'src/sync/api_client.dart';
+export 'src/util/format.dart';

@@ -1,0 +1,6 @@
+{
+  "canConsume": true,
+  "consumptionCurrency": "DIEM",
+  "balances": { "diem": 90.50, "usd": null },
+  "diemEpochAllocation": 100.0
+}

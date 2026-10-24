@@ -1,0 +1,6 @@
+{"providers":{
+  "delta":{"total_requests":1,"tokens":{"output":2},"approx_cost":0},
+  "charlie":{"total_requests":3,"approx_cost":2,"quota_groups":"invalid"},
+  "bravo":{"total_requests":3,"quota_groups":[{"remaining_percent":-10,"reset_time":"1970-01-01T00:00:00Z"}]},
+  "alpha":{"total_requests":4,"approx_cost":3,"quota_groups":{"a":{"reset_time":"2026-05-01T00:00:00Z"}}}
+}}

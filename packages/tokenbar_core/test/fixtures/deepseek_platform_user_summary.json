@@ -1,0 +1,14 @@
+{
+  "code": 0,
+  "data": {
+    "biz_code": 0,
+    "biz_data": {
+      "normal_wallets": [
+        {"balance": "7.97", "currency": "USD"}
+      ],
+      "bonus_wallets": [
+        {"balance": 0.50, "currency": "USD"}
+      ]
+    }
+  }
+}

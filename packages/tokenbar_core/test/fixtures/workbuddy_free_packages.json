@@ -1,0 +1,6 @@
+{"code":0,"msg":"OK","data":{"TotalCount":1,"Accounts":[{
+  "CapacityUnit": "credits",
+  "CycleStartTime": "2026-10-01 00:00:00",
+  "CycleEndTime": "2026-10-31 23:59:59",
+  "Status": 0
+}]}}

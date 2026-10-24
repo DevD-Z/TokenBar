@@ -1,0 +1,16 @@
+.git
+.dart_tool
+**/.dart_tool
+build
+**/build
+third_party
+data
+**/data
+android
+ios
+macos
+windows
+linux
+*.iml
+.idea
+.vscode

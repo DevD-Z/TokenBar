@@ -1,0 +1,16 @@
+name: tokenbar_core
+description: Pure Dart provider library for TokenBar (AI quota fetching, models, sync DTOs).
+version: 0.1.0
+publish_to: 'none'
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  http: ^1.2.0
+  sqlite3: ^3.8.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.0

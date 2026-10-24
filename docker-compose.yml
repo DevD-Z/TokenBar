@@ -1,0 +1,17 @@
+services:
+  tokenbar:
+    build: .
+    image: tokenbar:latest
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      # Admin token: used by desktop apps / `tokenbar collect` to push data.
+      TOKENBAR_TOKEN: ${TOKENBAR_TOKEN:?set TOKENBAR_TOKEN in .env}
+      # Optional read-only token for browsers / phones.
+      TOKENBAR_READ_TOKEN: ${TOKENBAR_READ_TOKEN:-}
+    volumes:
+      - tokenbar-data:/data
+
+volumes:
+  tokenbar-data:

@@ -1,0 +1,15 @@
+{
+  "userType": "MAX",
+  "bundledCredits": 9100,
+  "veniceCredits": 9600,
+  "email": "hidden@example.com",
+  "sub": "should-not-become-identity",
+  "exp": 1893456000,
+  "bundledCreditsUsage": {
+    "availableCredits": 9100,
+    "monthlyRefillCredits": 22500,
+    "nextRefillAt": 1790056735422,
+    "tierCap": 67500,
+    "usedThisCycle": 13400
+  }
+}

@@ -1,0 +1,1 @@
+{"budgets":[{"scopeType":"user","scopeId":"user_other","currentSpend":1,"limitAmount":2,"refreshPeriod":"monthly","active":true,"archived":false},{"scopeType":"user","scopeId":"usr_fixtureUser","currentSpend":5,"limitAmount":50,"refreshPeriod":"monthly","active":true,"archived":false,"source":"default"}],"nextCursor":"page 2"}

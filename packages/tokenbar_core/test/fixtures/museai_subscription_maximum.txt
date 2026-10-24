@@ -1,0 +1,2 @@
+0:{"a":"$@1","f":"","q":"","i":false}
+1:{"success":true,"subscription":{"tier":{"name":"Maximum"},"usage":{"percentUsed":3,"resetsAt":1790634838},"usageRowValueLabel":"3% used (2.8B tokens left)","topupBalance":60000000,"topupTotal":80000000,"topupRowLabel":"Additional tokens","topupRowValueLabel":"25% used (1.5B tokens left)","agreement":{"currentPeriodEndTime":1790721238}}}

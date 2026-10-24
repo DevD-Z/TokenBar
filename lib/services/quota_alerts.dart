@@ -1,0 +1,90 @@
+import 'package:tokenbar_core/tokenbar_core.dart';
+
+import '../ui/format.dart';
+
+class QuotaAlert {
+  const QuotaAlert(this.key, this.title, this.body);
+
+  final String key;
+  final String title;
+  final String body;
+}
+
+/// Pure decision logic: which notifications a new snapshot should trigger.
+///
+/// [state] maps `accountId|windowId` to the lowest threshold already
+/// notified in the current window period (and the period's reset time), so
+/// each threshold fires once per period.
+class QuotaAlertEngine {
+  QuotaAlertEngine(this.state);
+
+  final Map<String, Object?> state;
+
+  List<QuotaAlert> evaluate(
+    UsageSnapshot s, {
+    required List<int> thresholds,
+    required bool notifyOnReset,
+    required String providerName,
+  }) {
+    if (s.hasError) return const [];
+    final alerts = <QuotaAlert>[];
+    final sorted = [...thresholds]..sort();
+    final name = s.accountLabel ?? providerName;
+    for (final w in s.windows) {
+      final key = '${s.accountId}|${w.id}';
+      final entry = (state[key] as Map?)?.cast<String, Object?>() ?? {};
+      final prevReset = entry['reset'] as String?;
+      final prevRemaining = (entry['remaining'] as num?)?.toDouble();
+      var notified = (entry['level'] as num?)?.toInt();
+      final reset = w.resetsAt?.toUtc().toIso8601String();
+
+      final newPeriod =
+          prevReset != null &&
+          reset != null &&
+          reset != prevReset &&
+          DateTime.parse(reset).isAfter(DateTime.parse(prevReset));
+      if (newPeriod) {
+        if (notifyOnReset &&
+            prevRemaining != null &&
+            prevRemaining < 50 &&
+            w.remainingPercent > prevRemaining + 20) {
+          alerts.add(
+            QuotaAlert(
+              '$key|reset',
+              '$name · ${windowLabel(w)}额度已重置',
+              '当前剩余 ${formatPercent(w.remainingPercent)}',
+            ),
+          );
+        }
+        notified = null;
+      }
+
+      // The lowest threshold the window is currently below.
+      int? level;
+      for (final t in sorted) {
+        if (w.remainingPercent <= t) {
+          level = t;
+          break;
+        }
+      }
+      if (level != null && (notified == null || level < notified)) {
+        final resetText = w.resetsAt == null
+            ? ''
+            : '，${countdownZh(w.resetsAt!.difference(DateTime.now()))}后重置';
+        alerts.add(
+          QuotaAlert(
+            '$key|$level',
+            '$name · ${windowLabel(w)}额度不足',
+            '剩余 ${formatPercent(w.remainingPercent)}$resetText',
+          ),
+        );
+        notified = level;
+      } else if (level == null) {
+        notified = null;
+      }
+
+      state[key] = {'reset': ?reset, 'remaining': w.remainingPercent, 'level': ?notified};
+    }
+    return alerts;
+  }
+}

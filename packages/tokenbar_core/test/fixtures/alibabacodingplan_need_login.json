@@ -1,0 +1,6 @@
+{
+  "code": "ConsoleNeedLogin",
+  "message": "You need to log in.",
+  "requestId": "abc",
+  "successResponse": false
+}

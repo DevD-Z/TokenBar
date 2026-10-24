@@ -1,0 +1,20 @@
+{
+  "code": 0,
+  "msg": "OK",
+  "requestId": "fixture-request",
+  "data": {
+    "Packages": [{
+      "PackageCode": "FIXTURE_FREE",
+      "CycleTotalCapacity": "500",
+      "CycleRemainCapacity": "450",
+      "CycleUsedCapacity": "50",
+      "CycleFrozenCapacity": "0",
+      "CapacityUnit": "credits",
+      "TotalCount": 1
+    }],
+    "SubscriptionPackageCode": "",
+    "SubscriptionPackageName": "体验版",
+    "IsPaidUser": false,
+    "IsProtectedPriceUser": false
+  }
+}

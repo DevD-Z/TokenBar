@@ -1,0 +1,14 @@
+{
+  "remaining_balance_credits": "125",
+  "total_balance_credits": "500",
+  "next_credits_at": "2026-10-18T00:00:00.000Z",
+  "can_top_up": true,
+  "can_upgrade_plan": true,
+  "funding_subscription": {
+    "tier": "pro",
+    "source": "personal",
+    "provider": "stripe",
+    "status": "active",
+    "canceled": false
+  }
+}

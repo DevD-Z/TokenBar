@@ -1,0 +1,15 @@
+{
+  "code": 0,
+  "data": {
+    "biz_data": {
+      "data": [{
+        "currency": "CNY",
+        "series": [{
+          "api_key": {"name":"main","tracking_id":"key-1"},
+          "model": "deepseek-chat",
+          "buckets": [{"time": 1779796800, "cost": "0.12"}]
+        }]
+      }]
+    }
+  }
+}
