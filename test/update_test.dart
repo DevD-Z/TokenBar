@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -7,6 +8,7 @@ import 'package:token_bar/services/update/app_version.dart';
 import 'package:token_bar/services/update/update_service.dart';
 import 'package:token_bar/state/settings.dart';
 import 'package:token_bar/state/update_controller.dart';
+import 'package:token_bar/ui/update_dialog.dart';
 
 Map<String, Object?> _release(
   String tag, {
@@ -178,6 +180,40 @@ void main() {
     });
   });
 
+  testWidgets('update dialog shows the notes and can skip a version', (tester) async {
+    var settings = AppSettings.defaults();
+    final updates = UpdateController(
+      readSettings: () => settings,
+      saveSettings: (s) async => settings = s,
+      service: _service(_release('v1.1.0', body: 'Faster refresh\nNew tray panel')),
+      versionLoader: () async => '1.0.0',
+    );
+    await tester.runAsync(updates.init);
+    final release = updates.takePrompt()!;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showUpdateDialog(context, updates, release),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('发现新版本 v1.1.0'), findsOneWidget);
+    expect(find.text('当前版本 1.0.0'), findsOneWidget);
+    expect(find.textContaining('New tray panel'), findsOneWidget);
+    expect(find.text('前往下载'), findsOneWidget);
+
+    await tester.tap(find.text('忽略此版本'));
+    await tester.pumpAndSettle();
+    expect(find.text('发现新版本 v1.1.0'), findsNothing);
+    expect(settings.skippedVersion, 'v1.1.0');
+  });
   test('settings round-trip the update fields', () {
     final s = AppSettings.defaults().copyWith(autoCheckUpdates: false, skippedVersion: 'v2.0.0');
     final back = AppSettings.fromJson(s.toJson());
