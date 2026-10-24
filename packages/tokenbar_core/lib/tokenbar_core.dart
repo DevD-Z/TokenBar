@@ -3,6 +3,7 @@ library;
 
 export 'src/models/account.dart';
 export 'src/models/credits.dart';
+export 'src/models/model_usage.dart';
 export 'src/models/rate_window.dart';
 export 'src/models/usage_point.dart';
 export 'src/models/usage_snapshot.dart';

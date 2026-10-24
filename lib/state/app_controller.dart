@@ -305,6 +305,11 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  /// Per-model usage over `[since, now]` for the account, or null when the
+  /// service has no per-model data (or it cannot be read on this device).
+  /// TODO(model-usage): implemented by the data task; the UI already calls it.
+  Future<ModelUsageSeries?> modelUsage(String accountId, DateTime since) async => null;
+
   // ---------------------------------------------------------------- accounts
 
   Future<void> addAccount({
