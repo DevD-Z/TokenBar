@@ -480,6 +480,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get minimizeToTray => 'Minimize to tray when closing the window';
 
   @override
+  String get trayDisplay => 'Show in tray';
+
+  @override
+  String get trayDisplayHint =>
+      'The account whose remaining quota the tray icon (and macOS menu-bar title) shows.';
+
+  @override
+  String get trayDisplayAuto => 'Auto (most constrained)';
+
+  @override
   String get sectionAbout => 'About';
 
   @override

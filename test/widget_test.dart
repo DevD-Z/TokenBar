@@ -176,6 +176,7 @@ void main() {
       serverUrl: 'https://tb.example.com',
       serverToken: 'secret',
       thresholds: [30, 10],
+      trayAccountId: 'acc-1',
     );
     final json = s.toJson();
     expect(json.containsKey('serverToken'), isFalse);
@@ -184,6 +185,8 @@ void main() {
     expect(back.language, AppLanguage.en);
     expect(back.syncMode, SyncMode.localPush);
     expect(back.thresholds, [30, 10]);
+    expect(back.trayAccountId, 'acc-1');
+    expect(AppSettings.fromJson(const {}).trayAccountId, isEmpty); // older files: auto
     expect(back.serverConfigured, isTrue);
   });
 

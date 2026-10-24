@@ -36,4 +36,21 @@ void main() {
     expect(claude.last.at.difference(claude.first.at), const Duration(hours: DemoData.hours - 1));
     expect(claude.last.spend['claude-extra-usage'], closeTo(12.4, 0.01));
   });
+
+  test('Cursor and Codex have per-model usage, others do not', () {
+    final now = DateTime(2026, 6, 15, 14, 30);
+    expect(data.modelUsage('demo-claude', now.subtract(const Duration(days: 7)), now), isNull);
+
+    final week = data.modelUsage('demo-cursor', now.subtract(const Duration(days: 7)), now)!;
+    expect(week.bucket, const Duration(days: 1));
+    expect(week.models.length, greaterThan(2));
+    expect(week.isEmpty, isFalse);
+
+    final day = data.modelUsage('demo-codex', now.subtract(const Duration(hours: 24)), now)!;
+    expect(day.bucket, const Duration(hours: 1));
+
+    // Same hour, same numbers, whatever range is asked for.
+    final again = data.modelUsage('demo-cursor', now.subtract(const Duration(days: 7)), now)!;
+    expect(again.buckets.first.usage.first.tokens, week.buckets.first.usage.first.tokens);
+  });
 }

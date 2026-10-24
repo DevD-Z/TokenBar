@@ -29,6 +29,80 @@ class DemoData {
   final Map<String, UsageSnapshot> snapshots = {};
   final List<UsagePoint> history = [];
 
+  // ------------------------------------------------------------ model usage
+
+  /// Fictional models per account with their share of the traffic and an
+  /// average tokens-per-busy-hour figure.
+  static const _modelMix = <String, ({double tokensPerHour, List<(String, double)> models})>{
+    'demo-cursor': (
+      tokensPerHour: 900000,
+      models: [
+        ('claude-4.5-sonnet', 0.42),
+        ('gpt-5', 0.26),
+        ('auto', 0.18),
+        ('claude-4.5-haiku', 0.09),
+        ('gemini-2.5-pro', 0.05),
+      ],
+    ),
+    'demo-codex': (
+      tokensPerHour: 1400000,
+      models: [('gpt-5-codex', 0.62), ('gpt-5', 0.28), ('gpt-5-mini', 0.10)],
+    ),
+  };
+
+  /// Per-model usage for the demo accounts that have it (Cursor, Codex), else
+  /// null. Deterministic per hour, so switching the range back and forth shows
+  /// the same bars; hourly buckets for up to a day, daily buckets beyond.
+  ModelUsageSeries? modelUsage(String accountId, DateTime from, DateTime to) {
+    final mix = _modelMix[accountId];
+    if (mix == null) return null;
+    final hourly = to.difference(from) <= const Duration(hours: 25);
+    DateTime bucketOf(DateTime t) =>
+        hourly ? DateTime(t.year, t.month, t.day, t.hour) : DateTime(t.year, t.month, t.day);
+
+    final seed = accountId.codeUnits.fold<int>(7, (a, b) => a * 31 + b);
+    final byBucket = <DateTime, Map<String, double>>{};
+    for (
+      var t = DateTime(from.year, from.month, from.day, from.hour);
+      t.isBefore(to);
+      t = t.add(const Duration(hours: 1))
+    ) {
+      var busy = (t.hour >= 9 && t.hour < 23) ? 1.0 : 0.04;
+      if (t.hour == 12 || t.hour == 18) busy *= 0.4;
+      if (t.weekday >= 6) busy *= 0.35;
+      final r = Random(seed ^ (t.millisecondsSinceEpoch ~/ 3600000));
+      final slot = byBucket.putIfAbsent(bucketOf(t), () => {});
+      for (final (name, share) in mix.models) {
+        final tokens = busy * mix.tokensPerHour * share * (0.4 + r.nextDouble() * 1.2);
+        slot[name] = (slot[name] ?? 0) + tokens;
+      }
+    }
+
+    final starts = byBucket.keys.toList()..sort();
+    return ModelUsageSeries(
+      from: from,
+      to: to,
+      bucket: hourly ? const Duration(hours: 1) : const Duration(days: 1),
+      source: 'demo',
+      buckets: [
+        for (final start in starts)
+          ModelUsageBucket(
+            start: start,
+            usage: [
+              for (final e in byBucket[start]!.entries)
+                if (e.value >= 1000)
+                  ModelUsage(
+                    model: e.key,
+                    tokens: e.value.roundToDouble(),
+                    costUsd: e.value * 0.0000035,
+                    requests: (e.value / 24000).ceil(),
+                  ),
+            ],
+          ),
+      ],
+    );
+  }
+
   // ---------------------------------------------------------------- building
 
   void _build() {

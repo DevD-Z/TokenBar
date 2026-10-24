@@ -867,6 +867,24 @@ abstract class AppLocalizations {
   /// **'关闭窗口时最小化到托盘'**
   String get minimizeToTray;
 
+  /// No description provided for @trayDisplay.
+  ///
+  /// In zh, this message translates to:
+  /// **'托盘显示'**
+  String get trayDisplay;
+
+  /// No description provided for @trayDisplayHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'托盘图标（以及 macOS 菜单栏文字）显示哪个账户的剩余额度。'**
+  String get trayDisplayHint;
+
+  /// No description provided for @trayDisplayAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动（最紧张的账户）'**
+  String get trayDisplayAuto;
+
   /// No description provided for @sectionAbout.
   ///
   /// In zh, this message translates to:

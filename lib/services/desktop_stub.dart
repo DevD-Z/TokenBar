@@ -13,9 +13,13 @@ class DesktopIntegration {
     required void Function() onRefresh,
     required bool minimizeToTray,
     required AppLocalizations l10n,
+    void Function(String accountId)? onSelectTrayAccount,
+    String trayAccountId = '',
   }) async {}
 
   Future<void> update(List<UsageSnapshot> snapshots, AppLocalizations l10n) async {}
+
+  Future<void> setTrayAccount(String accountId) async {}
 
   Future<void> setMinimizeToTray(bool value) async {}
 

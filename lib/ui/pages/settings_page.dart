@@ -141,6 +141,23 @@ class SettingsPage extends StatelessWidget {
                         value: s.minimizeToTray,
                         onChanged: (v) => update(s.copyWith(minimizeToTray: v)),
                       ),
+                      ListTile(
+                        title: Text(l.trayDisplay),
+                        subtitle: Text(l.trayDisplayHint),
+                        trailing: DropdownButton<String>(
+                          // A removed account falls back to "auto".
+                          value: c.accounts.any((a) => a.id == s.trayAccountId)
+                              ? s.trayAccountId
+                              : '',
+                          underline: const SizedBox.shrink(),
+                          items: [
+                            DropdownMenuItem(value: '', child: Text(l.trayDisplayAuto)),
+                            for (final a in c.accounts)
+                              DropdownMenuItem(value: a.id, child: Text(a.label)),
+                          ],
+                          onChanged: (v) => update(s.copyWith(trayAccountId: v ?? '')),
+                        ),
+                      ),
                     ]),
                   const _AboutSection(),
                 ],

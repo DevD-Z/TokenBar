@@ -21,6 +21,12 @@ class DesktopIntegration with TrayListener, WindowListener {
   bool get supported => Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   void Function()? _onRefresh;
+  void Function(String accountId)? _onSelectTrayAccount;
+
+  /// Account the tray icon follows; empty = the most constrained one.
+  String _trayAccountId = '';
+  List<UsageSnapshot> _lastSnapshots = const [];
+  AppLocalizations? _l10n;
   bool _minimizeToTray = true;
   bool _trayReady = false;
   bool _quitting = false;
@@ -47,9 +53,14 @@ class DesktopIntegration with TrayListener, WindowListener {
     required void Function() onRefresh,
     required bool minimizeToTray,
     required AppLocalizations l10n,
+    void Function(String accountId)? onSelectTrayAccount,
+    String trayAccountId = '',
   }) async {
     if (!supported) return;
     _onRefresh = onRefresh;
+    _onSelectTrayAccount = onSelectTrayAccount;
+    _trayAccountId = trayAccountId;
+    _l10n = l10n;
     _minimizeToTray = minimizeToTray;
 
     await windowManager.ensureInitialized();
@@ -90,6 +101,8 @@ class DesktopIntegration with TrayListener, WindowListener {
 
   Future<void> update(List<UsageSnapshot> snapshots, AppLocalizations l10n) async {
     if (!supported || !_trayReady) return;
+    _lastSnapshots = snapshots;
+    _l10n = l10n;
     final height = TrayPanel.heightFor(snapshots);
     if (height != _panelHeight) {
       _panelHeight = height;
@@ -98,11 +111,21 @@ class DesktopIntegration with TrayListener, WindowListener {
       }
     }
     final withData = snapshots.where((s) => s.windows.isNotEmpty).toList();
-    // Icon follows the most constrained account.
+    // The icon follows the account the user picked; "auto" (or a picked account
+    // that has no data right now) falls back to the most constrained one.
     UsageSnapshot? focus;
-    for (final s in withData) {
-      final t = s.tightestWindow!;
-      if (focus == null || t.remainingPercent < focus.tightestWindow!.remainingPercent) focus = s;
+    if (_trayAccountId.isNotEmpty) {
+      for (final s in withData) {
+        if (s.accountId == _trayAccountId) focus = s;
+      }
+    }
+    if (focus == null) {
+      for (final s in withData) {
+        final t = s.tightestWindow!;
+        if (focus == null || t.remainingPercent < focus.tightestWindow!.remainingPercent) {
+          focus = s;
+        }
+      }
     }
     final top = focus?.session?.remainingPercent ?? focus?.tightestWindow?.remainingPercent;
     final bottom = focus?.weekly?.remainingPercent;
@@ -128,10 +151,20 @@ class DesktopIntegration with TrayListener, WindowListener {
     var tooltip = ['TokenBar', ...lines].join('\n');
     if (Platform.isWindows && tooltip.length > 127) tooltip = '${tooltip.substring(0, 126)}…';
     await trayManager.setToolTip(tooltip);
-    if (Platform.isMacOS && focus != null) {
-      await trayManager.setTitle(formatPercent(focus.tightestWindow!.remainingPercent));
+    if (Platform.isMacOS) {
+      await trayManager.setTitle(
+        focus == null ? '' : formatPercent(focus.tightestWindow!.remainingPercent),
+      );
     }
-    await _setMenu(l10n, lines);
+    await _setMenu(l10n, lines, snapshots);
+  }
+
+  /// Settings page / tray menu changed the account the tray icon follows.
+  Future<void> setTrayAccount(String accountId) async {
+    if (_trayAccountId == accountId) return;
+    _trayAccountId = accountId;
+    final l10n = _l10n;
+    if (l10n != null) await update(_lastSnapshots, l10n);
   }
 
   Future<void> _setIcon(double? top, double? bottom, bool error) async {
@@ -175,11 +208,40 @@ class DesktopIntegration with TrayListener, WindowListener {
 
   static const _trayChannel = MethodChannel('tray_manager');
 
-  Future<void> _setMenu(AppLocalizations l10n, List<String> lines) => trayManager.setContextMenu(
+  /// Menu keys of the "show in tray" choices: `tray:` (auto) or `tray:<accountId>`.
+  static const _trayKeyPrefix = 'tray:';
+
+  Future<void> _setMenu(
+    AppLocalizations l10n,
+    List<String> lines, [
+    List<UsageSnapshot> snapshots = const [],
+  ]) => trayManager.setContextMenu(
     Menu(
       items: [
         for (final line in lines) MenuItem(label: line, disabled: true),
         if (lines.isNotEmpty) MenuItem.separator(),
+        if (snapshots.isNotEmpty) ...[
+          MenuItem.submenu(
+            label: l10n.trayDisplay,
+            submenu: Menu(
+              items: [
+                MenuItem.checkbox(
+                  key: _trayKeyPrefix,
+                  label: l10n.trayDisplayAuto,
+                  checked: !snapshots.any((s) => s.accountId == _trayAccountId),
+                ),
+                MenuItem.separator(),
+                for (final s in snapshots)
+                  MenuItem.checkbox(
+                    key: '$_trayKeyPrefix${s.accountId}',
+                    label: s.accountLabel ?? s.providerId,
+                    checked: s.accountId == _trayAccountId,
+                  ),
+              ],
+            ),
+          ),
+          MenuItem.separator(),
+        ],
         MenuItem(key: 'show', label: l10n.openTokenBar),
         MenuItem(key: 'refresh', label: l10n.refreshNow),
         MenuItem.separator(),
@@ -329,7 +391,12 @@ class DesktopIntegration with TrayListener, WindowListener {
 
   @override
   void onTrayMenuItemClick(MenuItem menuItem) {
-    switch (menuItem.key) {
+    final key = menuItem.key;
+    if (key != null && key.startsWith(_trayKeyPrefix)) {
+      _onSelectTrayAccount?.call(key.substring(_trayKeyPrefix.length));
+      return;
+    }
+    switch (key) {
       case 'show':
         showWindow();
       case 'refresh':

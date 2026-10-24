@@ -455,6 +455,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get minimizeToTray => '关闭窗口时最小化到托盘';
 
   @override
+  String get trayDisplay => '托盘显示';
+
+  @override
+  String get trayDisplayHint => '托盘图标（以及 macOS 菜单栏文字）显示哪个账户的剩余额度。';
+
+  @override
+  String get trayDisplayAuto => '自动（最紧张的账户）';
+
+  @override
   String get sectionAbout => '关于';
 
   @override

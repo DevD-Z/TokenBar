@@ -6,7 +6,7 @@
 
 **所有 AI 额度，一眼看清。**
 开源、跨平台的 AI 额度监控：剩余额度、余额、重置倒计时和使用节奏。
-直接向各服务商查询，**核心功能不需要服务器**。
+支持 **Windows、macOS、Linux、Android 和 iOS**。
 
 [English](README.md) | 简体中文
 

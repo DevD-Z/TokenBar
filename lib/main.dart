@@ -48,6 +48,9 @@ Future<void> main(List<String> args) async {
     onRefresh: controller.refresh,
     minimizeToTray: settings.minimizeToTray,
     l10n: l10n,
+    trayAccountId: settings.trayAccountId,
+    onSelectTrayAccount: (id) =>
+        controller.updateSettings(controller.settings.copyWith(trayAccountId: id)),
   );
   await notifier.init(l10n);
   await homeWidget.init();
@@ -125,7 +128,12 @@ class _TokenBarAppState extends State<TokenBarApp> with WidgetsBindingObserver {
         builder: (context, panel, _) => Stack(
           children: [
             Offstage(offstage: panel, child: child),
-            if (panel) const Positioned.fill(child: TrayPanel()),
+            // The panel sits above the Navigator, so it has no Overlay of its own;
+            // tooltips (and anything else that floats) need one.
+            if (panel)
+              Positioned.fill(
+                child: Overlay(initialEntries: [OverlayEntry(builder: (_) => const TrayPanel())]),
+              ),
           ],
         ),
       ),

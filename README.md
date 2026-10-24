@@ -6,7 +6,7 @@
 
 **Every AI quota, one glance away.**
 An open-source, cross-platform monitor for AI usage limits, balances and reset times.
-Talks to the providers directly. **No server required.**
+Runs on **Windows, macOS, Linux, Android and iOS**.
 
 English | [简体中文](README.zh-CN.md)
 

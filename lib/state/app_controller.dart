@@ -62,9 +62,11 @@ class AppController extends ChangeNotifier {
 
   /// Demo mode: fictional accounts and data, no network, no real storage.
   bool demo = false;
+  DemoData? _demoData;
 
   void initDemo(DemoData data) {
     demo = true;
+    _demoData = data;
     settings = AppSettings.defaults().copyWith(
       notificationsEnabled: false,
       autoCheckUpdates: false,
@@ -327,7 +329,8 @@ class AppController extends ChangeNotifier {
   /// range back and forth does not re-read disks or re-request. Never throws.
   Future<ModelUsageSeries?> modelUsage(String accountId, DateTime since) async {
     try {
-      if (demo || !isLocalAccount(accountId)) return null;
+      if (demo) return _demoData?.modelUsage(accountId, since, _clock());
+      if (!isLocalAccount(accountId)) return null;
       final account = this.account(accountId);
       final provider = account == null ? null : _providerLookup(account.providerId);
       if (account == null || provider == null) return null;
@@ -452,6 +455,9 @@ class AppController extends ChangeNotifier {
     }
     if (prev.minimizeToTray != next.minimizeToTray) {
       await desktop.setMinimizeToTray(next.minimizeToTray);
+    }
+    if (prev.trayAccountId != next.trayAccountId) {
+      await desktop.setTrayAccount(next.trayAccountId);
     }
     if (prev.launchAtStartup != next.launchAtStartup) {
       await desktop.setLaunchAtStartup(next.launchAtStartup);
