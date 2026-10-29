@@ -15,7 +15,8 @@ class ClaudeProvider extends UsageProvider {
   static const _baseUrl = 'https://api.anthropic.com';
   static const _betaHeader = 'oauth-2025-04-20';
   static const _fallbackVersion = '2.1.0';
-  static const _tokenEndpoint = 'https://api.anthropic.com/v1/oauth/token';
+  static const _tokenEndpoint = 'https://platform.claude.com/v1/oauth/token';
+  static const _oauthTokenEndpoint = 'https://api.anthropic.com/v1/oauth/token';
 
   /// Claude Code's public OAuth client id (not a secret).
   static const _clientId = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
@@ -163,7 +164,7 @@ class ClaudeProvider extends UsageProvider {
 
     final response = await ctx.client
         .post(
-          Uri.parse(_tokenEndpoint),
+          Uri.parse(_oauthTokenEndpoint),
           headers: const {'Content-Type': 'application/json', 'Accept': 'application/json'},
           body: jsonEncode({
             'grant_type': 'refresh_token',
