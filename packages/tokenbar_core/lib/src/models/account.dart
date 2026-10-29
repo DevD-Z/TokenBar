@@ -1,5 +1,8 @@
 /// How an account's data is obtained.
 enum SourceType {
+  /// TokenBar-owned OAuth2 login.
+  oauth,
+
   /// Reuse a local CLI login (Codex auth.json, Claude credentials, ...).
   localCli,
 
@@ -31,8 +34,8 @@ class AccountConfig {
   /// several logged-in accounts of the same provider on one machine.
   final String? homeDir;
 
-  /// API key or token. Never serialized by [toJson]; apps keep it in secure
-  /// storage and inject it at runtime.
+  /// API key/token or TokenBar-owned OAuth credential bundle. Never serialized
+  /// by [toJson]; apps keep it in secure storage and inject it at runtime.
   final String? secret;
   final bool enabled;
   final Map<String, String> options;
