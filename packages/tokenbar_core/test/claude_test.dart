@@ -97,6 +97,39 @@ void main() {
       expect(usageReq.headers['User-Agent'], startsWith('claude-code/'));
     });
 
+    test('TokenBar-owned OAuth fetches without Claude Code credentials', () async {
+      final client = MockClient((r) async {
+        if (r.url.path == '/api/oauth/usage') {
+          expect(r.headers['Authorization'], 'Bearer owned-access');
+          return http.Response(
+            File('test/fixtures/claude_oauth_usage.json').readAsStringSync(),
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      });
+      final credential = OAuthCredential(
+        accessToken: 'owned-access',
+        refreshToken: 'owned-refresh',
+        expiresAt: DateTime.utc(2100),
+        scope: 'user:profile user:inference',
+        email: 'oauth@example.com',
+      );
+      final s = await ClaudeProvider().fetchSafely(
+        AccountConfig(
+          id: 'claude-oauth',
+          providerId: 'claude',
+          label: 'OAuth',
+          sourceType: SourceType.oauth,
+          secret: credential.encode(),
+        ),
+        FetchContext(client: client),
+      );
+      expect(s.error, isNull);
+      expect(s.email, 'oauth@example.com');
+      expect(s.source, 'oauth');
+    });
+
     test('expired token without opt-in refresh asks to run claude', () async {
       File('${dir.path}/.credentials.json')
           .writeAsStringSync(jsonEncode(_credentialsJson(expiresAtMs: 1000)));
