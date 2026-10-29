@@ -7,6 +7,7 @@ import 'package:tokenbar_core/tokenbar_core.dart';
 import '../../demo/demo_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/app_controller.dart';
+import '../../services/oauth/oauth_service.dart';
 import '../../state/settings.dart';
 import '../format.dart';
 import '../widgets/provider_badge.dart';
@@ -161,7 +162,7 @@ class AccountsPage extends StatelessWidget {
   static String _describe(AppLocalizations l, AccountConfig a) {
     final provider = ProviderRegistry.instance.byId(a.providerId);
     final parts = <String>[provider?.displayName ?? a.providerId];
-    if (a.sourceType == SourceType.apiKey) {
+    if (a.sourceType == SourceType.apiKey || a.sourceType == SourceType.oauth) {
       parts.add(sourceTypeLabel(l, a.providerId, a.sourceType));
     } else {
       // Demo mode never shows real paths (they contain the OS user name).
@@ -258,6 +259,7 @@ class _AccountEditorState extends State<_AccountEditor> {
   final Map<String, TextEditingController> _fields = {};
   final Map<String, String> _choices = {};
   late Map<String, String> _savedSecrets;
+  bool _connecting = false;
 
   UsageProvider get _provider => ProviderRegistry.instance.byId(_providerId)!;
   List<SourceType> get _sources => _sourcesOf(_provider);
@@ -270,7 +272,9 @@ class _AccountEditorState extends State<_AccountEditor> {
     _source = e?.sourceType ?? _sources.first;
     _label = TextEditingController(text: e?.label ?? _provider.displayName);
     _home = TextEditingController(text: e?.homeDir ?? '');
-    _savedSecrets = e?.providerId == _providerId ? SecretBundle.decode(e?.secret) : {};
+    _savedSecrets = e?.providerId == _providerId && e?.sourceType == SourceType.apiKey
+        ? SecretBundle.decode(e?.secret)
+        : {};
     _resetFields();
   }
 
@@ -331,6 +335,41 @@ class _AccountEditorState extends State<_AccountEditor> {
     final label = _label.text.trim().isEmpty ? _provider.displayName : _label.text.trim();
     final home = _home.text.trim();
     final manual = _source == SourceType.apiKey;
+
+    if (_source == SourceType.oauth) {
+      setState(() => _connecting = true);
+      final oauth = OAuthService();
+      try {
+        final credential = await oauth.signIn(_providerId);
+        if (!mounted) return;
+        final e = widget.existing;
+        if (e == null) {
+          await c.addAccount(
+            providerId: _providerId,
+            label: label,
+            sourceType: SourceType.oauth,
+            secret: credential.encode(),
+          );
+        } else {
+          await c.updateAccount(
+            e.copyWith(
+              label: label,
+              sourceType: SourceType.oauth,
+              clearHomeDir: true,
+              secret: credential.encode(),
+              options: const {},
+            ),
+          );
+        }
+        if (mounted) Navigator.pop(context);
+      } catch (e) {
+        if (mounted) _toast(e.toString());
+      } finally {
+        oauth.close();
+        if (mounted) setState(() => _connecting = false);
+      }
+      return;
+    }
 
     final secrets = <String, String>{..._savedSecrets};
     final options = <String, String>{...?widget.existing?.options};
@@ -461,6 +500,11 @@ class _AccountEditorState extends State<_AccountEditor> {
                       helperMaxLines: 2,
                     ),
                   ),
+              ] else if (_source == SourceType.oauth) ...[
+                Text(
+                  'Sign in securely with OAuth2. Access and refresh tokens are stored in the system secure storage.',
+                  style: muted,
+                ),
               ] else
                 for (final f in _provider.fields) ...[
                   _buildField(l, f),
@@ -472,7 +516,14 @@ class _AccountEditorState extends State<_AccountEditor> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(l.cancel)),
-        FilledButton(onPressed: _save, child: Text(l.save)),
+        FilledButton(
+          onPressed: _connecting ? null : _save,
+          child: Text(
+            _connecting
+                ? 'Connecting…'
+                : (_source == SourceType.oauth ? 'Connect with OAuth' : l.save),
+          ),
+        ),
       ],
     );
   }
