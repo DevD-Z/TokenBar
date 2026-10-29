@@ -1,0 +1,73 @@
+workflows:
+  ios-unsigned:
+    name: TokenBar iOS - Unsigned IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    environment:
+      flutter: 3.47.7
+      xcode: latest
+      cocoapods: default
+      vars:
+        APP_NAME: "TokenBar"
+
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+
+    scripts:
+      - name: Show build environment
+        script: |
+          flutter --version
+          dart --version
+          xcodebuild -version
+
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+
+      - name: Install CocoaPods dependencies when available
+        script: |
+          if [ -f "$CM_BUILD_DIR/ios/Podfile" ]; then
+            cd "$CM_BUILD_DIR/ios"
+            pod install
+          else
+            echo "No ios/Podfile found. Skipping CocoaPods install."
+          fi
+
+      - name: Build iOS release without code signing
+        script: |
+          cd "$CM_BUILD_DIR"
+          flutter build ios --release --no-codesign
+
+      - name: Create unsigned IPA
+        script: |
+          cd "$CM_BUILD_DIR"
+
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          IPA_DIR="build/ios/ipa"
+          PAYLOAD_DIR="$IPA_DIR/Payload"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "ERROR: $APP_PATH was not created."
+            exit 1
+          fi
+
+          rm -rf "$IPA_DIR"
+          mkdir -p "$PAYLOAD_DIR"
+
+          cp -R "$APP_PATH" "$PAYLOAD_DIR/Runner.app"
+
+          cd "$IPA_DIR"
+          /usr/bin/zip -qry "$APP_NAME-unsigned.ipa" Payload
+          rm -rf Payload
+
+          echo "Created: $CM_BUILD_DIR/$IPA_DIR/$APP_NAME-unsigned.ipa"
+          ls -lh "$CM_BUILD_DIR/$IPA_DIR"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/iphoneos/*.app
+      - build/ios/**/*.dSYM
+      - /tmp/xcodebuild_logs/*.log
