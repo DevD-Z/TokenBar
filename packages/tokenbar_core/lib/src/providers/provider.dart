@@ -3,9 +3,15 @@ import 'package:http/http.dart' as http;
 import '../models/account.dart';
 import '../models/credits.dart';
 import '../models/model_usage.dart';
+import '../models/oauth_credential.dart';
 import '../models/rate_window.dart';
 import '../models/usage_snapshot.dart';
 import 'fields.dart';
+
+typedef OAuthCredentialUpdated = Future<void> Function(
+  AccountConfig account,
+  OAuthCredential credential,
+);
 
 /// Shared dependencies for a fetch.
 class FetchContext {
@@ -15,6 +21,7 @@ class FetchContext {
     this.allowClaudeTokenRefresh = false,
     this.allowCliFallback = true,
     this.userAgent = 'TokenBar',
+    this.onOAuthCredentialUpdated,
   }) : client = client ?? http.Client(),
        clock = clock ?? DateTime.now;
 
@@ -28,6 +35,9 @@ class FetchContext {
   /// Allow launching provider CLIs (e.g. `codex app-server`) as a fallback.
   final bool allowCliFallback;
   final String userAgent;
+
+  /// Persists TokenBar-owned OAuth token rotation in platform secure storage.
+  final OAuthCredentialUpdated? onOAuthCredentialUpdated;
 
   DateTime now() => clock();
 }
@@ -115,12 +125,6 @@ abstract class UsageProvider {
   /// expected failures; [fetchSafely] converts them into error snapshots.
   Future<UsageSnapshot> fetch(AccountConfig account, FetchContext ctx);
 
-  /// Per-model usage over `[from, to]` for a stacked bar chart, or null when this
-  /// service has no per-model data (the default) or it cannot be read right now.
-  ///
-  /// Best-effort: implementations return null instead of throwing, so it can never
-  /// affect the quota refresh. Buckets follow [modelUsageBucketWidth]. Only model names
-  /// and numbers may be returned — never prompts, file paths or credentials.
   Future<ModelUsageSeries?> fetchModelUsage(
     AccountConfig account,
     FetchContext ctx, {
