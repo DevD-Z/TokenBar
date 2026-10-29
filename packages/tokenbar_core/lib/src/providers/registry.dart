@@ -15,6 +15,7 @@ import 'api/search_api_providers.dart';
 import 'api/venice_provider.dart';
 import 'api/vercel_provider.dart';
 import 'api/xai_provider.dart';
+import 'antigravity/antigravity_provider.dart';
 import 'claude/claude_provider.dart';
 import 'codex/codex_provider.dart';
 import 'cursor/cursor_provider.dart';
@@ -24,6 +25,7 @@ class ProviderRegistry {
   ProviderRegistry._(this.all);
 
   static final ProviderRegistry instance = ProviderRegistry._([
+    AntigravityProvider(),
     CodexProvider(),
     ClaudeProvider(),
     CursorProvider(),
