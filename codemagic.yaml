@@ -39,7 +39,15 @@ workflows:
       - name: Build iOS release without code signing
         script: |
           cd "$CM_BUILD_DIR"
-          flutter build ios --release --no-codesign
+
+          if [ -z "$ANTIGRAVITY_CLIENT_ID" ] || [ -z "$ANTIGRAVITY_CLIENT_SECRET" ]; then
+            echo "WARNING: Antigravity OAuth build variables are not configured."
+            echo "Antigravity will be disabled in this build."
+          fi
+
+          flutter build ios --release --no-codesign \
+            --dart-define=ANTIGRAVITY_CLIENT_ID="$ANTIGRAVITY_CLIENT_ID" \
+            --dart-define=ANTIGRAVITY_CLIENT_SECRET="$ANTIGRAVITY_CLIENT_SECRET"
 
       - name: Create unsigned IPA
         script: |
