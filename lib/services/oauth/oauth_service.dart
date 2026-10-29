@@ -86,7 +86,7 @@ class OAuthService {
         throw OAuthLoginException('OAuth state verification failed');
       }
 
-      final credential = await _exchange(config, code, redirectUri, pkce.codeVerifier);
+      final credential = await _exchange(config, code, redirectUri, pkce.codeVerifier, pkce.state);
       if (providerId == 'claude') {
         final email = await _claudeEmail(credential.accessToken);
         if (email != null) return credential.copyWith(email: email);
@@ -126,6 +126,7 @@ class OAuthService {
     String code,
     Uri redirectUri,
     String codeVerifier,
+    String state,
   ) async {
     late http.Response response;
     if (config.providerId == 'claude') {
@@ -139,6 +140,7 @@ class OAuthService {
               'code': code,
               'redirect_uri': redirectUri.toString(),
               'code_verifier': codeVerifier,
+              'state': state,
             }),
           )
           .timeout(const Duration(seconds: 30));
@@ -174,7 +176,9 @@ class OAuthService {
 
     final expiresIn = _asInt(data['expires_in']);
     final idToken = data['id_token'] as String?;
-    final claims = idToken == null ? null : _decodeJwtPayload(idToken);
+    final idClaims = idToken == null ? null : _decodeJwtPayload(idToken);
+    final accessClaims = _decodeJwtPayload(accessToken);
+    final claims = idClaims ?? accessClaims;
     final auth = claims?['https://api.openai.com/auth'];
     final authMap = auth is Map ? auth.cast<String, Object?>() : const <String, Object?>{};
 
@@ -186,13 +190,18 @@ class OAuthService {
           ? null
           : DateTime.now().toUtc().add(Duration(seconds: expiresIn)),
       scope: data['scope'] is String ? data['scope'] as String : null,
-      email: claims?['email'] as String?,
+      email:
+          idClaims?['email'] as String? ??
+          accessClaims?['email'] as String? ??
+          accessClaims?['preferred_username'] as String?,
       accountId:
           authMap['chatgpt_account_id'] as String? ??
-          claims?['account_id'] as String?,
+          idClaims?['account_id'] as String? ??
+          accessClaims?['account_id'] as String?,
       plan:
           authMap['chatgpt_plan_type'] as String? ??
-          claims?['plan_type'] as String?,
+          idClaims?['plan_type'] as String? ??
+          accessClaims?['plan_type'] as String?,
     );
   }
 
