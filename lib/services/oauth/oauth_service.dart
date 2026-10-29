@@ -41,12 +41,40 @@ class OAuthService {
     callbackPath: '/callback',
   );
 
+  static const _antigravity = _OAuthConfig(
+    providerId: 'antigravity',
+    clientId: antigravityClientId,
+    clientSecret: antigravityClientSecret,
+    authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    scopes: [
+      'https://www.googleapis.com/auth/cloud-platform',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/cclog',
+      'https://www.googleapis.com/auth/experimentsandconfigs',
+    ],
+    callbackPath: '/callback',
+    usesPkce: false,
+  );
+
   Future<OAuthCredential> signIn(String providerId) async {
     final config = switch (providerId) {
       'codex' => _codex,
       'claude' => _claude,
+      'antigravity' => _antigravity,
       _ => throw OAuthLoginException('OAuth is not supported for $providerId'),
     };
+
+    if (config.clientId.isEmpty) {
+      throw OAuthLoginException('$providerId OAuth client ID is not configured in this build');
+    }
+    if (providerId == 'antigravity' && (config.clientSecret?.isEmpty ?? true)) {
+      throw OAuthLoginException(
+        'Antigravity OAuth is not configured. Set ANTIGRAVITY_CLIENT_ID and '
+        'ANTIGRAVITY_CLIENT_SECRET when building TokenBar.',
+      );
+    }
 
     final pkce = _generatePkce();
     OAuthCallbackServer? callback;
@@ -86,10 +114,20 @@ class OAuthService {
         throw OAuthLoginException('OAuth state verification failed');
       }
 
-      final credential = await _exchange(config, code, redirectUri, pkce.codeVerifier, pkce.state);
+      var credential = await _exchange(
+        config,
+        code,
+        redirectUri,
+        pkce.codeVerifier,
+        pkce.state,
+      );
+
       if (providerId == 'claude') {
         final email = await _claudeEmail(credential.accessToken);
-        if (email != null) return credential.copyWith(email: email);
+        if (email != null) credential = credential.copyWith(email: email);
+      } else if (providerId == 'antigravity') {
+        final email = await _googleEmail(credential.accessToken);
+        if (email != null) credential = credential.copyWith(email: email);
       }
       return credential;
     } on UnsupportedError catch (e) {
@@ -105,9 +143,9 @@ class OAuthService {
       'client_id': config.clientId,
       'redirect_uri': redirectUri.toString(),
       'scope': config.scopes.join(' '),
-      'code_challenge': pkce.codeChallenge,
-      'code_challenge_method': 'S256',
       'state': pkce.state,
+      if (config.usesPkce) 'code_challenge': pkce.codeChallenge,
+      if (config.usesPkce) 'code_challenge_method': 'S256',
     };
     if (config.providerId == 'codex') {
       params.addAll(const {
@@ -117,6 +155,11 @@ class OAuthService {
       });
     } else if (config.providerId == 'claude') {
       params['code'] = 'true';
+    } else if (config.providerId == 'antigravity') {
+      params.addAll(const {
+        'access_type': 'offline',
+        'prompt': 'consent',
+      });
     }
     return Uri.parse(config.authorizeUrl).replace(queryParameters: params);
   }
@@ -155,9 +198,10 @@ class OAuthService {
             body: {
               'grant_type': 'authorization_code',
               'client_id': config.clientId,
+              if (config.clientSecret?.isNotEmpty == true) 'client_secret': config.clientSecret!,
               'code': code,
               'redirect_uri': redirectUri.toString(),
-              'code_verifier': codeVerifier,
+              if (config.usesPkce) 'code_verifier': codeVerifier,
             },
           )
           .timeout(const Duration(seconds: 30));
@@ -226,6 +270,28 @@ class OAuthService {
     }
   }
 
+  Future<String?> _googleEmail(String accessToken) async {
+    try {
+      final response = await _client
+          .get(
+            Uri.parse('https://www.googleapis.com/oauth2/v1/userinfo?alt=json'),
+            headers: {
+              'Authorization': 'Bearer $accessToken',
+              'Accept': 'application/json',
+              'x-request-source': 'local',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final json = jsonDecode(response.body);
+      if (json is! Map) return null;
+      final email = json['email'];
+      return email is String && email.trim().isNotEmpty ? email.trim() : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   void close() => _client.close();
 }
 
@@ -237,16 +303,20 @@ class _OAuthConfig {
     required this.tokenUrl,
     required this.scopes,
     required this.callbackPath,
+    this.clientSecret,
     this.fixedPort,
+    this.usesPkce = true,
   });
 
   final String providerId;
   final String clientId;
+  final String? clientSecret;
   final String authorizeUrl;
   final String tokenUrl;
   final List<String> scopes;
   final String callbackPath;
   final int? fixedPort;
+  final bool usesPkce;
 }
 
 class _Pkce {
