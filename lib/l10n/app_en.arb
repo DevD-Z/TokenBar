@@ -204,7 +204,7 @@
   "serverAccounts": "Accounts on the server",
   "serverNotConfigured": "Server not configured",
   "noRemoteAccounts": "No accounts pushed by other devices yet.",
-  "mobileAccountsHint": "Services that take an API key or a pasted cookie can be queried directly on your phone. Codex / Claude sign in on a computer only; to see them on your phone, turn on optional server sync in Settings.",
+  "mobileAccountsHint": "Antigravity, Codex and Claude can connect with OAuth directly on this device. API-key and cookie providers can also be queried locally.",
   "defaultLogin": "Default login",
   "defaultLoginAt": "Default login ({home})",
   "deleteAccountTitle": "Delete account",

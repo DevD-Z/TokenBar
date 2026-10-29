@@ -9,6 +9,7 @@ export 'src/models/rate_window.dart';
 export 'src/models/usage_point.dart';
 export 'src/models/usage_snapshot.dart';
 export 'src/platform/platform.dart' show localAccessSupported;
+export 'src/providers/antigravity/antigravity_provider.dart';
 export 'src/providers/claude/claude_credentials.dart'
     show ClaudeCredentials, resolveClaudeConfigDir;
 export 'src/providers/api/account_api_providers.dart'

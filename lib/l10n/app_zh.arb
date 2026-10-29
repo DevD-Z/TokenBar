@@ -165,8 +165,8 @@
   "noAccountsYetPanel": "还没有账户\n打开 TokenBar 添加服务",
   "noQuotaDataYet": "还没有额度数据",
   "webEmptyMessage": "还没有设备推送数据。\n在电脑上的 TokenBar 开启“推送本机数据”，或运行 tokenbar collect。",
-  "desktopEmptyMessage": "添加 Codex、Claude 或 Cursor 账户。\nTokenBar 会直接读取本机登录状态，向官方查询额度。",
-  "mobileEmptyMessage": "添加 Cursor 账户（粘贴 cursor.com Cookie）即可直接查看额度。\nCodex / Claude 的登录在电脑上，可选用服务器同步到手机。",
+  "desktopEmptyMessage": "添加 Antigravity、Codex、Claude 或 Cursor 账户。\nOAuth 账户会直接在本设备向官方查询额度。",
+  "mobileEmptyMessage": "可直接通过 OAuth 添加 Antigravity、Codex 或 Claude 并查看额度。\nAPI Key 和 Cookie 服务也可在本机查询。",
   "serverSettings": "服务器设置",
 
   "settingsAppearance": "外观",
@@ -312,7 +312,7 @@
   "serverAccounts": "服务器上的账户",
   "serverNotConfigured": "未配置服务器",
   "noRemoteAccounts": "服务器上暂无其他设备推送的账户。",
-  "mobileAccountsHint": "填写 API Key 或粘贴 Cookie 的服务可以直接在手机上查询。Codex / Claude 等只在电脑上登录的服务，想在手机上看，可在设置里开启可选的服务器同步。",
+  "mobileAccountsHint": "Antigravity、Codex 和 Claude 可直接在本设备通过 OAuth 登录；API Key 和 Cookie 服务也可在本机查询。",
   "defaultLogin": "默认登录",
   "defaultLoginAt": "默认登录（{home}）",
   "@defaultLoginAt": {
