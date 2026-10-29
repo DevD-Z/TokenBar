@@ -136,6 +136,7 @@ String sourceLabel(AppLocalizations l, String? source) => switch (source) {
 String sourceTypeLabel(AppLocalizations l, String providerId, SourceType type) {
   final provider = ProviderRegistry.instance.byId(providerId);
   return switch (type) {
+    SourceType.oauth => 'OAuth',
     SourceType.localCli => provider?.localSourceLabel ?? l.localLogin,
     SourceType.apiKey => provider?.manualSourceLabel ?? 'API Key',
   };
