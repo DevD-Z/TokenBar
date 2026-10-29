@@ -9,7 +9,7 @@ class OAuthCallbackServer {
 
   Uri get redirectUri => Uri(
     scheme: 'http',
-    host: '127.0.0.1',
+    host: 'localhost',
     port: _server.port,
     path: _path,
   );
