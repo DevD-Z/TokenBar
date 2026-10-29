@@ -163,6 +163,36 @@ chatgpt_base_url = "https://proxy.example.com/" # trailing comment
       expect(snapshot.source, 'oauth');
     });
 
+    test('TokenBar-owned OAuth fetches without local auth.json', () async {
+      late http.Request seen;
+      final client = MockClient((request) async {
+        seen = request;
+        return http.Response(File('test/fixtures/wham_usage_plus.json').readAsStringSync(), 200);
+      });
+      final credential = OAuthCredential(
+        accessToken: _jwt({'exp': 4102444800, 'email': 'oauth@example.com'}),
+        refreshToken: 'refresh',
+        accountId: 'acct-oauth',
+        expiresAt: DateTime.utc(2100),
+        email: 'oauth@example.com',
+        plan: 'plus',
+      );
+      final snapshot = await CodexProvider().fetchSafely(
+        AccountConfig(
+          id: 'oauth1',
+          providerId: 'codex',
+          label: 'OAuth',
+          sourceType: SourceType.oauth,
+          secret: credential.encode(),
+        ),
+        FetchContext(client: client, allowCliFallback: false),
+      );
+      expect(snapshot.error, isNull);
+      expect(seen.headers['ChatGPT-Account-Id'], 'acct-oauth');
+      expect(snapshot.email, 'oauth@example.com');
+      expect(snapshot.source, 'oauth');
+    });
+
     test('missing auth.json yields actionable error snapshot', () async {
       final snapshot = await CodexProvider().fetchSafely(
         AccountConfig(id: 'a1', providerId: 'codex', label: 'x', homeDir: home.path),
