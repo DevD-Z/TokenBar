@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import '../../models/account.dart';
 import '../../models/model_usage.dart';
+import '../../models/oauth_credential.dart';
 import '../../models/usage_snapshot.dart';
 import '../../platform/platform.dart' as platform;
 import '../../util/json_utils.dart';
@@ -28,15 +29,15 @@ class CodexProvider extends UsageProvider {
   int get brandColor => 0xFF10A37F;
 
   @override
-  List<SourceType> get supportedSources => const [SourceType.localCli];
+  List<SourceType> get supportedSources => const [SourceType.oauth, SourceType.localCli];
 
   @override
   String get localSourceLabel => '本机 Codex CLI 登录';
 
   @override
   String get setupHint =>
-      '读取本机 Codex CLI 登录（~/.codex/auth.json）。先运行 `codex login`。'
-      '多账户可为每个账户指定不同的 CODEX_HOME 目录。';
+      '推荐使用 OAuth 登录 ChatGPT/Codex；也可继续读取本机 Codex CLI 登录。'
+      'OAuth 凭证只保存在 TokenBar 的系统安全存储中。';
 
   @override
   Future<bool> hasLocalLogin(AccountConfig account) async {
@@ -49,6 +50,9 @@ class CodexProvider extends UsageProvider {
 
   @override
   Future<UsageSnapshot> fetch(AccountConfig account, FetchContext ctx) async {
+    if (account.sourceType == SourceType.oauth) {
+      return _fetchOwnedOAuth(account, ctx);
+    }
     if (!platform.localAccessSupported) {
       throw ProviderException('此平台无法读取本机 Codex 登录', hint: '请在电脑端或采集器上添加该账户，并通过服务器同步查看');
     }
@@ -109,7 +113,7 @@ class CodexProvider extends UsageProvider {
     required DateTime from,
     required DateTime to,
   }) async {
-    if (!platform.localAccessSupported) return null;
+    if (account.sourceType != SourceType.localCli || !platform.localAccessSupported) return null;
     try {
       final home = resolveCodexHome(account.homeDir);
       if (home == null) return null;
@@ -117,6 +121,98 @@ class CodexProvider extends UsageProvider {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<UsageSnapshot> _fetchOwnedOAuth(AccountConfig account, FetchContext ctx) async {
+    var credential = OAuthCredential.decode(account.secret);
+    if (credential == null) {
+      throw ProviderException('未找到 TokenBar OAuth 凭证', hint: '请重新连接 ChatGPT / Codex');
+    }
+
+    if (credential.expiresWithin(ctx.now(), const Duration(minutes: 10))) {
+      credential = await _refreshOwnedOAuth(account, credential, ctx);
+    }
+
+    final creds = CodexCredentials(
+      accessToken: credential.accessToken,
+      refreshToken: credential.refreshToken,
+      idToken: credential.idToken,
+      accountId: credential.accountId,
+      expiresAt: credential.expiresAt,
+      email: credential.email,
+      planFromToken: credential.plan,
+    );
+
+    try {
+      return await _fetchOAuth(account, creds, null, ctx);
+    } on ProviderException catch (e) {
+      if ((e.statusCode == 401 || e.statusCode == 403) && credential.refreshToken != null) {
+        final refreshed = await _refreshOwnedOAuth(account, credential, ctx);
+        final retryCreds = CodexCredentials(
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          idToken: refreshed.idToken,
+          accountId: refreshed.accountId,
+          expiresAt: refreshed.expiresAt,
+          email: refreshed.email,
+          planFromToken: refreshed.plan,
+        );
+        return _fetchOAuth(account, retryCreds, null, ctx);
+      }
+      rethrow;
+    }
+  }
+
+  Future<OAuthCredential> _refreshOwnedOAuth(
+    AccountConfig account,
+    OAuthCredential credential,
+    FetchContext ctx,
+  ) async {
+    final refreshToken = credential.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw ProviderException(
+        'Codex OAuth 登录已过期',
+        hint: '请重新连接 ChatGPT / Codex',
+        statusCode: 401,
+      );
+    }
+
+    final response = await ctx.client
+        .post(
+          Uri.parse('https://auth.openai.com/oauth/token'),
+          headers: const {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: jsonEncode({
+            'client_id': 'app_EMoamEEZ73f0CkXaXp7hrann',
+            'grant_type': 'refresh_token',
+            'refresh_token': refreshToken,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ProviderException(
+        'Codex OAuth 刷新失败 (HTTP ${response.statusCode})',
+        hint: '请重新连接 ChatGPT / Codex',
+        statusCode: response.statusCode,
+      );
+    }
+
+    final json = decodeJsonObject(response.body);
+    final access = asString(json?['access_token']);
+    if (json == null || access == null) {
+      throw ProviderException('Codex OAuth 刷新返回了无效数据');
+    }
+
+    final expiresIn = asInt(json['expires_in']) ?? 3600;
+    final idToken = asString(json['id_token']) ?? credential.idToken;
+    final refreshed = credential.copyWith(
+      accessToken: access,
+      refreshToken: asString(json['refresh_token']) ?? refreshToken,
+      idToken: idToken,
+      expiresAt: ctx.now().toUtc().add(Duration(seconds: expiresIn)),
+    );
+    await ctx.onOAuthCredentialUpdated?.call(account, refreshed);
+    return refreshed;
   }
 
   Future<UsageSnapshot> _fetchOAuth(

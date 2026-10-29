@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import '../../models/account.dart';
+import '../../models/oauth_credential.dart';
 import '../../models/usage_snapshot.dart';
 import '../../platform/platform.dart' as platform;
 import '../../util/json_utils.dart';
@@ -15,6 +16,7 @@ class ClaudeProvider extends UsageProvider {
   static const _betaHeader = 'oauth-2025-04-20';
   static const _fallbackVersion = '2.1.0';
   static const _tokenEndpoint = 'https://platform.claude.com/v1/oauth/token';
+  static const _oauthTokenEndpoint = 'https://api.anthropic.com/v1/oauth/token';
 
   /// Claude Code's public OAuth client id (not a secret).
   static const _clientId = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
@@ -33,15 +35,15 @@ class ClaudeProvider extends UsageProvider {
   int get brandColor => 0xFFD97757;
 
   @override
-  List<SourceType> get supportedSources => const [SourceType.localCli];
+  List<SourceType> get supportedSources => const [SourceType.oauth, SourceType.localCli];
 
   @override
   String get localSourceLabel => '本机 Claude Code 登录';
 
   @override
   String get setupHint =>
-      '读取本机 Claude Code 登录（~/.claude/.credentials.json，macOS 为钥匙串）。'
-      '先运行 `claude` 并登录 Pro/Max 账户。多账户可指定不同的 CLAUDE_CONFIG_DIR。';
+      '推荐使用 OAuth 直接连接 Claude；也可继续读取本机 Claude Code 登录。'
+      'OAuth 凭证只保存在 TokenBar 的系统安全存储中。';
 
   @override
   Future<bool> hasLocalLogin(AccountConfig account) async =>
@@ -49,6 +51,9 @@ class ClaudeProvider extends UsageProvider {
 
   @override
   Future<UsageSnapshot> fetch(AccountConfig account, FetchContext ctx) async {
+    if (account.sourceType == SourceType.oauth) {
+      return _fetchOwnedOAuth(account, ctx);
+    }
     if (!platform.localAccessSupported) {
       throw ProviderException('此平台无法读取本机 Claude 登录', hint: '请在电脑端或采集器上添加该账户，并通过服务器同步查看');
     }
@@ -90,6 +95,107 @@ class ClaudeProvider extends UsageProvider {
       credits: parsed.credits,
       extras: {if (creds.rateLimitTier != null) 'rateLimitTier': creds.rateLimitTier!},
     );
+  }
+
+  Future<UsageSnapshot> _fetchOwnedOAuth(AccountConfig account, FetchContext ctx) async {
+    final blocked = _blockedUntil[account.id];
+    if (blocked != null && ctx.now().isBefore(blocked)) {
+      throw ProviderException(
+        'Claude 用量接口限流中',
+        hint: '将于 ${blocked.toLocal()} 后重试',
+        statusCode: 429,
+      );
+    }
+
+    var credential = OAuthCredential.decode(account.secret);
+    if (credential == null) {
+      throw ProviderException('未找到 TokenBar OAuth 凭证', hint: '请重新连接 Claude');
+    }
+
+    final scopes = (credential.scope ?? '').split(RegExp(r'\s+')).where((e) => e.isNotEmpty);
+    if (scopes.isNotEmpty && !scopes.contains('user:profile')) {
+      throw ProviderException('Claude OAuth 令牌缺少 user:profile 权限', hint: '请重新连接 Claude');
+    }
+
+    if (credential.expiresWithin(ctx.now(), const Duration(hours: 4))) {
+      credential = await _refreshOwnedOAuth(account, credential, ctx);
+    }
+
+    Future<UsageSnapshot> load(OAuthCredential current) async {
+      final usage = await _fetchUsage(account, current.accessToken, ctx);
+      final parsed = parseClaudeOAuthUsage(usage);
+      final email = current.email ?? await _email(current.accessToken, ctx);
+      return UsageSnapshot(
+        accountId: account.id,
+        providerId: id,
+        fetchedAt: ctx.now(),
+        plan: current.plan,
+        email: email,
+        source: 'oauth',
+        windows: parsed.windows,
+        credits: parsed.credits,
+      );
+    }
+
+    try {
+      return await load(credential);
+    } on ProviderException catch (e) {
+      if (e.statusCode == 401 && credential.refreshToken != null) {
+        final refreshed = await _refreshOwnedOAuth(account, credential, ctx);
+        return load(refreshed);
+      }
+      rethrow;
+    }
+  }
+
+  Future<OAuthCredential> _refreshOwnedOAuth(
+    AccountConfig account,
+    OAuthCredential credential,
+    FetchContext ctx,
+  ) async {
+    final refreshToken = credential.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw ProviderException(
+        'Claude OAuth 登录已过期',
+        hint: '请重新连接 Claude',
+        statusCode: 401,
+      );
+    }
+
+    final response = await ctx.client
+        .post(
+          Uri.parse(_oauthTokenEndpoint),
+          headers: const {'Content-Type': 'application/json', 'Accept': 'application/json'},
+          body: jsonEncode({
+            'grant_type': 'refresh_token',
+            'refresh_token': refreshToken,
+            'client_id': _clientId,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ProviderException(
+        'Claude OAuth 刷新失败 (HTTP ${response.statusCode})',
+        hint: '请重新连接 Claude',
+        statusCode: response.statusCode,
+      );
+    }
+
+    final json = decodeJsonObject(response.body);
+    final access = asString(json?['access_token']);
+    if (json == null || access == null) {
+      throw ProviderException('Claude OAuth 刷新返回了无效数据');
+    }
+
+    final expiresIn = asInt(json['expires_in']) ?? 3600;
+    final refreshed = credential.copyWith(
+      accessToken: access,
+      refreshToken: asString(json['refresh_token']) ?? refreshToken,
+      expiresAt: ctx.now().toUtc().add(Duration(seconds: expiresIn)),
+      scope: asString(json['scope']) ?? credential.scope,
+    );
+    await ctx.onOAuthCredentialUpdated?.call(account, refreshed);
+    return refreshed;
   }
 
   Future<ClaudeCredentials> _refreshIfAllowed(

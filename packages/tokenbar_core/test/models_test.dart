@@ -46,6 +46,34 @@ void main() {
     expect(back.extras['k'], 'v');
   });
 
+  test('OAuth credential roundtrip stays out of account json', () {
+    final credential = OAuthCredential(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      idToken: 'id',
+      expiresAt: DateTime.utc(2030),
+      email: 'user@example.com',
+      accountId: 'acct',
+      plan: 'plus',
+    );
+    final decoded = OAuthCredential.decode(credential.encode())!;
+    expect(decoded.accessToken, 'access');
+    expect(decoded.refreshToken, 'refresh');
+    expect(decoded.accountId, 'acct');
+
+    final account = AccountConfig(
+      id: 'oauth',
+      providerId: 'codex',
+      label: 'OAuth',
+      sourceType: SourceType.oauth,
+      secret: credential.encode(),
+    );
+    expect(account.toJson()['sourceType'], 'oauth');
+    expect(account.toJson().containsKey('secret'), isFalse);
+    expect(account.toJson().toString(), isNot(contains('access')));
+    expect(account.toJson().toString(), isNot(contains('refresh')));
+  });
+
   test('account json never contains the secret', () {
     const a = AccountConfig(
       id: 'x',

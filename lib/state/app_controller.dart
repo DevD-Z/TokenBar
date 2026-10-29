@@ -210,6 +210,7 @@ class AppController extends ChangeNotifier {
       allowClaudeTokenRefresh: settings.allowClaudeRefresh,
       allowCliFallback: settings.allowCliFallback,
       userAgent: 'TokenBar/0.1',
+      onOAuthCredentialUpdated: _persistOAuthCredential,
     );
     final origin = settings.deviceName.isEmpty ? null : settings.deviceName;
     final futures = accounts.where((a) => a.enabled).map((a) async {
@@ -232,6 +233,21 @@ class AppController extends ChangeNotifier {
     }
     ctx.client.close();
     return results;
+  }
+
+  Future<void> _persistOAuthCredential(
+    AccountConfig account,
+    OAuthCredential credential,
+  ) async {
+    final index = accounts.indexWhere((a) => a.id == account.id);
+    if (index < 0) return;
+    final current = accounts[index];
+    if (current.sourceType != SourceType.oauth) return;
+    final updated = current.copyWith(secret: credential.encode());
+    accounts = [
+      for (var i = 0; i < accounts.length; i++) i == index ? updated : accounts[i],
+    ];
+    await persistence.saveAccounts(accounts);
   }
 
   TokenBarApiClient _api() =>

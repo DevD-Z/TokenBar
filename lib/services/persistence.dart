@@ -13,8 +13,6 @@ class Persistence {
 
   static Future<Persistence> open() async => Persistence._(await SharedPreferences.getInstance());
 
-  /// In-memory storage for demo mode: nothing is read from or written to the
-  /// real preferences or the system secure storage.
   static Future<Persistence> openDemo() async {
     // ignore: invalid_use_of_visible_for_testing_member
     SharedPreferences.setMockInitialValues({});
@@ -37,8 +35,6 @@ class Persistence {
     try {
       return await _secure.read(key: key);
     } catch (e) {
-      // Secure storage can be unavailable (e.g. Linux without libsecret,
-      // insecure web context); fall back to prefs so the app keeps working.
       debugPrint('secure storage read failed: $e');
       return _prefs.getString('fallback.$key');
     }
@@ -88,9 +84,9 @@ class Persistence {
     final accounts = <AccountConfig>[];
     for (final json in list) {
       final account = AccountConfig.fromJson(json);
-      final secret = account.sourceType == SourceType.apiKey
-          ? await _readSecret(_secretKey(account.id))
-          : null;
+      final usesSecret =
+          account.sourceType == SourceType.apiKey || account.sourceType == SourceType.oauth;
+      final secret = usesSecret ? await _readSecret(_secretKey(account.id)) : null;
       accounts.add(secret == null ? account : account.copyWith(secret: secret));
     }
     return accounts;
@@ -99,7 +95,7 @@ class Persistence {
   Future<void> saveAccounts(List<AccountConfig> accounts) async {
     await _prefs.setString(_accountsKey, jsonEncode(accounts.map((a) => a.toJson()).toList()));
     for (final a in accounts) {
-      if (a.sourceType == SourceType.apiKey) {
+      if (a.sourceType == SourceType.apiKey || a.sourceType == SourceType.oauth) {
         await _writeSecret(_secretKey(a.id), a.secret);
       }
     }
@@ -107,7 +103,6 @@ class Persistence {
 
   Future<void> deleteAccountSecret(String accountId) => _writeSecret(_secretKey(accountId), null);
 
-  /// Last snapshots, so the UI shows data instantly on launch.
   List<UsageSnapshot> loadCachedSnapshots() {
     final raw = _prefs.getString(_snapshotsKey);
     if (raw == null) return [];
