@@ -68,7 +68,7 @@ const Set<String> providerColoredIconIds = {'aixy', 'claude', 'futureagi', 'sub2
 /// Registered providers that deliberately keep the initial-letter badge
 /// (no suitable single-colour logo: the CodexBar SVG relies on `<mask>` and
 /// gradients).
-const Set<String> providerIconFallbackIds = {'ibmbob'};
+const Set<String> providerIconFallbackIds = {'antigravity', 'ibmbob'};
 
 /// App-icon style badge: rounded square. Shows the provider logo when one is
 /// bundled, otherwise a brand-colour gradient tile with the initial letter.
