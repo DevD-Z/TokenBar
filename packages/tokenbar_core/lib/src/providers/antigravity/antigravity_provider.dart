@@ -13,10 +13,14 @@ class AntigravityProvider extends UsageProvider {
   static const _tokenUrl = 'https://oauth2.googleapis.com/token';
   static const _loadCodeAssistUrl =
       'https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist';
-  static const _quotaUrl =
-      'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels';
-  static const _quotaSummaryUrl =
-      'https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary';
+  static const _quotaSummaryUrls = [
+    'https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary',
+    'https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary',
+  ];
+  static const _quotaModelUrls = [
+    'https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels',
+    'https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels',
+  ];
   static const _userAgent = 'antigravity/hub/2.24.0 darwin/arm64';
 
   static const _metadata = {
@@ -138,25 +142,42 @@ class AntigravityProvider extends UsageProvider {
 
     final windows = <RateWindow>[];
 
-    final weekly = await _postJson(
-      ctx,
-      Uri.parse(_quotaSummaryUrl),
-      credential.accessToken,
-      {if (project != null) 'project': project},
-      tolerateForbidden: true,
-    );
-    if (weekly != null) windows.addAll(parseAntigravityQuotaSummary(weekly));
+    for (final url in _quotaSummaryUrls) {
+      final summary = await _postJson(
+        ctx,
+        Uri.parse(url),
+        credential.accessToken,
+        {if (project != null) 'project': project},
+        tolerateForbidden: true,
+      );
+      if (summary == null) continue;
 
-    final models = await _postJson(
-      ctx,
-      Uri.parse(_quotaUrl),
-      credential.accessToken,
-      {if (project != null) 'project': project},
-      tolerateForbidden: true,
-    );
-    if (models != null) {
-      final image = parseAntigravityImageQuota(models);
-      if (image != null) windows.add(image);
+      final parsed = parseAntigravityQuotaSummary(summary);
+      for (final window in parsed) {
+        if (!windows.any((item) => item.id == window.id)) {
+          windows.add(window);
+        }
+      }
+
+      final hasGemini = windows.any((item) => item.id.startsWith('antigravity-gemini-'));
+      final hasClaude = windows.any((item) => item.id.startsWith('antigravity-claude-gpt-'));
+      if (hasGemini && hasClaude) break;
+    }
+
+    if (windows.isEmpty) {
+      for (final url in _quotaModelUrls) {
+        final models = await _postJson(
+          ctx,
+          Uri.parse(url),
+          credential.accessToken,
+          {if (project != null) 'project': project},
+          tolerateForbidden: true,
+        );
+        if (models == null) continue;
+
+        windows.addAll(parseAntigravityModelQuotas(models));
+        if (windows.isNotEmpty) break;
+      }
     }
 
     if (windows.isEmpty) {
@@ -326,19 +347,53 @@ List<RateWindow> parseAntigravityQuotaSummary(Map<String, Object?> data) {
   return windows;
 }
 
-RateWindow? parseAntigravityImageQuota(Map<String, Object?> data) {
+List<RateWindow> parseAntigravityModelQuotas(Map<String, Object?> data) {
   final models = asMap(data['models']);
-  final info = asMap(models?['gemini-3.1-flash-image']);
-  final quota = asMap(info?['quotaInfo']);
-  final remaining = asDouble(quota?['remainingFraction']);
-  if (quota == null || remaining == null) return null;
-  return RateWindow(
-    id: 'antigravity-gemini-3.1-flash-image',
-    label: 'Gemini 3.1 Flash Image',
-    usedPercent: ((1 - remaining) * 100).clamp(0, 100).toDouble(),
-    resetsAt: _parseGoogleReset(quota['resetTime']),
-    windowMinutes: 300,
-  );
+  if (models == null) return const [];
+
+  final windows = <RateWindow>[];
+  final seenQuotaKeys = <String>{};
+
+  for (final entry in models.entries) {
+    final modelId = entry.key;
+    final info = asMap(entry.value);
+    if (info == null || info['isInternal'] == true) continue;
+
+    final displayName = asString(info['displayName']);
+    if (displayName == null || displayName.trim().isEmpty) continue;
+
+    final quota = asMap(info['quotaInfo']);
+    final remaining = asDouble(quota?['remainingFraction']);
+    if (quota == null || remaining == null || !remaining.isFinite) continue;
+
+    final reset = _parseGoogleReset(quota['resetTime']);
+    final quotaKey = '${remaining.toStringAsFixed(6)}|${reset?.toIso8601String() ?? ''}';
+    if (!seenQuotaKeys.add(quotaKey)) continue;
+
+    windows.add(
+      RateWindow(
+        id: 'antigravity-model-${_safeQuotaId(modelId)}',
+        label: displayName.trim(),
+        usedPercent: ((1 - remaining) * 100).clamp(0, 100).toDouble(),
+        resetsAt: reset,
+        windowMinutes: 300,
+      ),
+    );
+
+    // The fallback is only needed to show a useful quota when the pooled
+    // summary endpoint is unavailable. Keep the card compact.
+    if (windows.length >= 4) break;
+  }
+
+  return windows;
+}
+
+String _safeQuotaId(String value) {
+  final normalized = value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'^-+|-+$'), '');
+  return normalized.isEmpty ? 'unknown' : normalized;
 }
 
 DateTime? _parseGoogleReset(Object? raw) {
