@@ -9,6 +9,10 @@ import '../provider.dart';
 
 const String antigravityClientId = String.fromEnvironment('ANTIGRAVITY_CLIENT_ID');
 const String antigravityClientSecret = String.fromEnvironment('ANTIGRAVITY_CLIENT_SECRET');
+const String antigravityIosClientId = String.fromEnvironment('ANTIGRAVITY_IOS_CLIENT_ID');
+
+String get antigravityOAuthClientId =>
+    antigravityIosClientId.isNotEmpty ? antigravityIosClientId : antigravityClientId;
 
 class AntigravityProvider extends UsageProvider {
   static const _tokenUrl = 'https://oauth2.googleapis.com/token';
@@ -44,10 +48,10 @@ class AntigravityProvider extends UsageProvider {
 
   @override
   Future<UsageSnapshot> fetch(AccountConfig account, FetchContext ctx) async {
-    if (antigravityClientId.isEmpty || antigravityClientSecret.isEmpty) {
+    if (antigravityOAuthClientId.isEmpty) {
       throw ProviderException(
         'Antigravity OAuth is not configured in this build',
-        hint: 'Set ANTIGRAVITY_CLIENT_ID and ANTIGRAVITY_CLIENT_SECRET when building TokenBar',
+        hint: 'Set ANTIGRAVITY_IOS_CLIENT_ID on iOS or ANTIGRAVITY_CLIENT_ID on desktop',
       );
     }
 
@@ -95,8 +99,9 @@ class AntigravityProvider extends UsageProvider {
           body: {
             'grant_type': 'refresh_token',
             'refresh_token': refreshToken,
-            'client_id': antigravityClientId,
-            'client_secret': antigravityClientSecret,
+            'client_id': antigravityOAuthClientId,
+            if (antigravityClientSecret.isNotEmpty)
+              'client_secret': antigravityClientSecret,
           },
         )
         .timeout(const Duration(seconds: 30));
