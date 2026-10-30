@@ -1,0 +1,98 @@
+name: Build iOS Unsigned
+
+on:
+  workflow_dispatch:
+    inputs:
+      antigravity_ios_client_id:
+        description: "Google iOS OAuth Client ID (*.apps.googleusercontent.com)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-unsigned-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.7"
+
+jobs:
+  ios:
+    name: Build iOS unsigned IPA
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Configure Google iOS OAuth
+        env:
+          ANTIGRAVITY_IOS_CLIENT_ID: ${{ inputs.antigravity_ios_client_id }}
+        run: |
+          set -euo pipefail
+
+          case "$ANTIGRAVITY_IOS_CLIENT_ID" in
+            *.apps.googleusercontent.com) ;;
+            *)
+              echo "::error title=Invalid OAuth client::Expected an iOS client ID ending in .apps.googleusercontent.com"
+              exit 1
+              ;;
+          esac
+
+          CLIENT_PREFIX="${ANTIGRAVITY_IOS_CLIENT_ID%.apps.googleusercontent.com}"
+          REVERSED_CLIENT_ID="com.googleusercontent.apps.$CLIENT_PREFIX"
+          PLIST="$GITHUB_WORKSPACE/ios/Runner/Info.plist"
+
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleURLTypes" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleTypeRole string Editor" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $REVERSED_CLIENT_ID" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Delete :GIDClientID" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :GIDClientID string $ANTIGRAVITY_IOS_CLIENT_ID" "$PLIST"
+
+          echo "Configured OAuth URL scheme: $REVERSED_CLIENT_ID"
+
+      - name: Build iOS release without code signing
+        env:
+          ANTIGRAVITY_IOS_CLIENT_ID: ${{ inputs.antigravity_ios_client_id }}
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=ANTIGRAVITY_IOS_CLIENT_ID="$ANTIGRAVITY_IOS_CLIENT_ID"
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          test -d "$APP_PATH"
+
+          rm -rf stage dist
+          mkdir -p stage/Payload dist
+          cp -R "$APP_PATH" stage/Payload/
+          (cd stage && /usr/bin/zip -qry "../dist/TokenBar-ios-unsigned.ipa" Payload)
+
+          ls -lh dist/TokenBar-ios-unsigned.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: TokenBar-ios-unsigned
+          path: dist/TokenBar-ios-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
