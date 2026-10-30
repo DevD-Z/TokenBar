@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:http/http.dart' as http;
 import 'package:tokenbar_core/tokenbar_core.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -41,39 +43,30 @@ class OAuthService {
     callbackPath: '/callback',
   );
 
-  static const _antigravity = _OAuthConfig(
-    providerId: 'antigravity',
-    clientId: antigravityClientId,
-    clientSecret: antigravityClientSecret,
-    authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenUrl: 'https://oauth2.googleapis.com/token',
-    scopes: [
-      'https://www.googleapis.com/auth/cloud-platform',
-      'https://www.googleapis.com/auth/userinfo.email',
-      'https://www.googleapis.com/auth/userinfo.profile',
-      'https://www.googleapis.com/auth/cclog',
-      'https://www.googleapis.com/auth/experimentsandconfigs',
-    ],
-    callbackPath: '/callback',
-    usesPkce: false,
-  );
+  static const _antigravityScopes = [
+    'https://www.googleapis.com/auth/cloud-platform',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/cclog',
+    'https://www.googleapis.com/auth/experimentsandconfigs',
+  ];
+
+  static const FlutterAppAuth _appAuth = FlutterAppAuth();
+
 
   Future<OAuthCredential> signIn(String providerId) async {
+    if (providerId == 'antigravity') {
+      return _signInAntigravityIos();
+    }
+
     final config = switch (providerId) {
       'codex' => _codex,
       'claude' => _claude,
-      'antigravity' => _antigravity,
       _ => throw OAuthLoginException('OAuth is not supported for $providerId'),
     };
 
     if (config.clientId.isEmpty) {
       throw OAuthLoginException('$providerId OAuth client ID is not configured in this build');
-    }
-    if (providerId == 'antigravity' && (config.clientSecret?.isEmpty ?? true)) {
-      throw OAuthLoginException(
-        'Antigravity OAuth is not configured. Set ANTIGRAVITY_CLIENT_ID and '
-        'ANTIGRAVITY_CLIENT_SECRET when building TokenBar.',
-      );
     }
 
     final pkce = _generatePkce();
@@ -125,15 +118,69 @@ class OAuthService {
       if (providerId == 'claude') {
         final email = await _claudeEmail(credential.accessToken);
         if (email != null) credential = credential.copyWith(email: email);
-      } else if (providerId == 'antigravity') {
-        final email = await _googleEmail(credential.accessToken);
-        if (email != null) credential = credential.copyWith(email: email);
       }
       return credential;
     } on UnsupportedError catch (e) {
       throw OAuthLoginException(e.message ?? 'OAuth is not available on this platform');
     } finally {
       await callback?.close();
+    }
+  }
+
+  Future<OAuthCredential> _signInAntigravityIos() async {
+    if (!Platform.isIOS) {
+      throw OAuthLoginException('Antigravity OAuth in this build is configured for iOS only');
+    }
+
+    final clientId = antigravityIosClientId.trim();
+    if (clientId.isEmpty) {
+      throw OAuthLoginException(
+        'Antigravity iOS OAuth client ID is not configured. '
+        'Set ANTIGRAVITY_IOS_CLIENT_ID when building TokenBar.',
+      );
+    }
+    if (!clientId.endsWith('.apps.googleusercontent.com')) {
+      throw OAuthLoginException('ANTIGRAVITY_IOS_CLIENT_ID is not a valid Google iOS client ID');
+    }
+
+    final reversedClientId = clientId.split('.').reversed.join('.');
+    final redirectUri = '$reversedClientId:/oauth2redirect/google';
+
+    try {
+      final response = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          clientId,
+          redirectUri,
+          serviceConfiguration: const AuthorizationServiceConfiguration(
+            authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+            tokenEndpoint: 'https://oauth2.googleapis.com/token',
+          ),
+          scopes: _antigravityScopes,
+          promptValues: const ['consent'],
+          additionalParameters: const {'access_type': 'offline'},
+        ),
+      );
+
+      final accessToken = response.accessToken;
+      if (accessToken == null || accessToken.isEmpty) {
+        throw OAuthLoginException('Google OAuth did not return an access token');
+      }
+
+      var credential = OAuthCredential(
+        accessToken: accessToken,
+        refreshToken: response.refreshToken,
+        idToken: response.idToken,
+        expiresAt: response.accessTokenExpirationDateTime?.toUtc(),
+        scope: response.scopes?.join(' '),
+      );
+
+      final email = await _googleEmail(accessToken);
+      if (email != null) credential = credential.copyWith(email: email);
+      return credential;
+    } on FlutterAppAuthUserCancelledException {
+      throw OAuthLoginException('Antigravity sign-in was cancelled');
+    } on FlutterAppAuthPlatformException catch (error) {
+      throw OAuthLoginException('Antigravity OAuth failed: $error');
     }
   }
 
@@ -155,11 +202,6 @@ class OAuthService {
       });
     } else if (config.providerId == 'claude') {
       params['code'] = 'true';
-    } else if (config.providerId == 'antigravity') {
-      params.addAll(const {
-        'access_type': 'offline',
-        'prompt': 'consent',
-      });
     }
     return Uri.parse(config.authorizeUrl).replace(queryParameters: params);
   }
