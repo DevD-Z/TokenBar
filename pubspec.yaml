@@ -32,6 +32,7 @@ dependencies:
   screen_retriever: ^0.2.2
   package_info_plus: ^9.0.1
   url_launcher: ^6.3.3
+  flutter_appauth: ^12.1.0
   intl: ^0.20.3
   flutter_svg: ^2.3.0
 
