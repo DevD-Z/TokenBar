@@ -5,6 +5,8 @@ workflows:
     max_build_duration: 60
 
     environment:
+      groups:
+        - antigravity_oauth
       flutter: 3.47.7
       xcode: latest
       cocoapods: default
@@ -41,8 +43,11 @@ workflows:
           cd "$CM_BUILD_DIR"
 
           if [ -z "$ANTIGRAVITY_CLIENT_ID" ] || [ -z "$ANTIGRAVITY_CLIENT_SECRET" ]; then
-            echo "WARNING: Antigravity OAuth build variables are not configured."
-            echo "Antigravity will be disabled in this build."
+            echo "ERROR: Antigravity OAuth variables are missing."
+            echo "Create Codemagic variable group: antigravity_oauth"
+            echo "Add: ANTIGRAVITY_CLIENT_ID"
+            echo "Add: ANTIGRAVITY_CLIENT_SECRET"
+            exit 1
           fi
 
           flutter build ios --release --no-codesign \
