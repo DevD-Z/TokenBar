@@ -1,13 +1,8 @@
 name: CI
 
-# Runs on every push / pull request to main, and can be started by hand from
-# the "Actions" tab. It only checks and builds the project: there is no release
-# signing and no GitHub Release step (see release.yml for that).
+# Full cross-platform CI is manual only in this fork.
+# Use "Build iOS Unsigned" for the normal iOS-only build.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 # Least privilege: the jobs only need to read the repository contents.
